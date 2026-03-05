@@ -83,6 +83,18 @@ body.sunset::before {
   background: rgba(221, 158, 0, 0.32);
  
 }
+
+.coyote {
+  position: absolute;
+  z-index: 5;
+  animation: coyoteFloat 3s infinite ease-in-out;
+}
+
+@keyframes coyoteFloat {
+  0% { transform: translateX(0px); }
+  50% { transform: translateX(15px); }
+  100% { transform: translateX(0px); }
+}
 .power {
     font-size: 80px;
     text-shadow: 0 0 20px #121247;
@@ -374,5 +386,8 @@ body.sunset::before {
   text-shadow: 2px 2px 4px #121247;
   -webkit-text-stroke: 1px #4e0000;
 }
+
+
+
 
 
