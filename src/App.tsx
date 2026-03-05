@@ -409,7 +409,7 @@ export default function App() {
           return "famine";
         }
 
-        if (roll < 0.9) {
+        if (roll < 0.018) {
           setEventTimeLeft(25);
           document.body.classList.add("coyotes");
           return "coyotes";
