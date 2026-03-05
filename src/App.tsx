@@ -232,7 +232,7 @@ export default function App() {
 
             const healAmount =
               Math.floor(
-                Math.random() * (passive.minHeal - passive.maxHeal + 1),
+                Math.random() * (passive.minHeal - passive.minHeal + 1),
               ) + passive.minHeal;
 
             return {
@@ -409,7 +409,7 @@ export default function App() {
           return "famine";
         }
 
-        if (roll < 0.018) {
+        if (roll < 0.9) {
           setEventTimeLeft(25);
           document.body.classList.add("coyotes");
           return "coyotes";
