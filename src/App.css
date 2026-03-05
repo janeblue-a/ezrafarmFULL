@@ -86,7 +86,7 @@ body.sunset::before {
 
 .coyote {
   position: absolute;
-  z-index: 5;
+  z-index: -999;
   animation: coyoteFloat 3s infinite ease-in-out;
 }
 
