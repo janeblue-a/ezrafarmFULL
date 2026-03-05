@@ -11,6 +11,7 @@ import denisSheep from "./Images/denisSheep.png";
 import baldDenis from "./Images/baldDenis.png";
 import crownSheep from "./Images/crownSheep.png";
 import baldCrown from "./Images/crownbald.png";
+import coyote from "./Images/VespaCoyote.png";
 
 let shopIsOpen = false;
 
@@ -171,6 +172,9 @@ export default function App() {
 
   const [sheeps, setSheeps] = useState<Sheep[]>([createSheep()]);
 
+  const [coyotes, setCoyotes] = useState<
+    { id: number; x: number; y: number }[]
+  >([]);
   const [carrotCount, setCarrotCount] = useState(10);
   const [carrotOpen, setCarrotOpen] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
@@ -184,7 +188,9 @@ export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [SaveGameUse, setSaveGameUse] = useState("Save Game");
   const [shearsEquipped, setShearsEquipped] = useState(false);
-  const [currentEvent, setCurrentEvent] = useState<null | "famine">(null);
+  const [currentEvent, setCurrentEvent] = useState<null | "famine" | "coyotes">(
+    null,
+  );
   const [eventTimeLeft, setEventTimeLeft] = useState(0);
   const [timeOfDay, setTimeOfDay] = useState(0);
 
@@ -334,9 +340,21 @@ export default function App() {
 
           return { ...s, hunger: Math.max(0, s.hunger - hungerLoss) };
         });
+        const afterCoyotes =
+          currentEvent === "coyotes"
+            ? afterHunger.filter((s) => {
+                if (s.hunger < 45) {
+                  const wolfChance = 0.35;
+                  if (Math.random() < wolfChance) {
+                    return false;
+                  }
+                }
+                return true;
+              })
+            : afterHunger;
 
-        const deadSheep = afterHunger.filter((s) => s.hunger <= 0);
-        const aliveSheep = afterHunger.filter((s) => s.hunger > 0);
+        const deadSheep = afterCoyotes.filter((s) => s.hunger <= 0);
+        const aliveSheep = afterCoyotes.filter((s) => s.hunger > 0);
 
         if (deadSheep.length > 0) {
           const penaltyPerSheep = 175;
@@ -364,16 +382,37 @@ export default function App() {
   }, [isLoaded, currentEvent, timePhase]);
 
   useEffect(() => {
+    if (currentEvent === "coyotes") {
+      const newCoyotes = Array.from({ length: 3 }, () => ({
+        id: Date.now() + Math.random(),
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * 300 + 150,
+      }));
+
+      setCoyotes(newCoyotes);
+    } else {
+      setCoyotes([]);
+    }
+  }, [currentEvent]);
+  useEffect(() => {
     if (!isLoaded) return;
 
     const eventRoll = setInterval(() => {
       setCurrentEvent((prev) => {
         if (prev !== null) return prev;
 
-        if (Math.random() < 0.01) {
+        const roll = Math.random();
+
+        if (roll < 0.01) {
           setEventTimeLeft(40);
           document.body.classList.add("famine");
           return "famine";
+        }
+
+        if (roll < 0.018) {
+          setEventTimeLeft(25);
+          document.body.classList.add("coyotes");
+          return "coyotes";
         }
 
         return prev;
@@ -585,6 +624,12 @@ export default function App() {
           I would watch my food well, the farms have run dry ({eventTimeLeft}s)
         </p>
       )}
+      {currentEvent === "coyotes" && (
+        <p className="eventWarning">
+          There are spooky scary Vespas hunting weak sheep, watch out (
+          {eventTimeLeft}s)
+        </p>
+      )}
       <div>
         <button className="buttton" onClick={carrotClick}>
           {carrotOpen ? "holding carrot" : `Carrot stack: ${carrotCount}`}
@@ -596,6 +641,22 @@ export default function App() {
       </div>
 
       <img className={`left ${mosesHere}`} src={moses} alt="moses" />
+
+      {coyotes.map((w) => (
+        <img
+          key={w.id}
+          src={coyote}
+          className="coyote"
+          style={{
+            position: "absolute",
+            left: `${w.x}px`,
+            top: `${w.y}px`,
+            width: "120px",
+            pointerEvents: "none",
+          }}
+          alt="coyote"
+        />
+      ))}
 
       <div
         className="sheep-container"
