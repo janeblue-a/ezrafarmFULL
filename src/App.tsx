@@ -488,7 +488,7 @@ export default function App() {
     if (currentEvent !== "oncemore") return;
 
     const stealInterval = setInterval(() => {
-      setMoney((prev) => Math.max(0, prev - 1));
+      setMoney((prev) => Math.max(0, prev -  Math.ceil(Math.random() * 2)));
     }, 800);
 
     return () => clearInterval(stealInterval);
