@@ -12,6 +12,7 @@ import baldDenis from "./Images/baldDenis.png";
 import crownSheep from "./Images/crownSheep.png";
 import baldCrown from "./Images/crownbald.png";
 import coyote from "./Images/VespaCoyote.png";
+import oncemore from "./Images/oncemore.png";
 
 let shopIsOpen = false;
 
@@ -80,6 +81,7 @@ const sheepLines = {
     "hello farmer",
     "chewing",
     "fluffy",
+    "i want a chair",
   ],
   hungry: [
     "need food",
@@ -103,6 +105,8 @@ const sheepLines = {
     "our food is limited, farmer",
     "counting...",
     "arghhhhh im sheeping it so goooood",
+    "feed me THIS INSTANT",
+    "make me a sandwich",
   ],
 };
 
@@ -188,11 +192,16 @@ export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [SaveGameUse, setSaveGameUse] = useState("Save Game");
   const [shearsEquipped, setShearsEquipped] = useState(false);
-  const [currentEvent, setCurrentEvent] = useState<null | "famine" | "coyotes">(
-    null,
-  );
+  const [currentEvent, setCurrentEvent] = useState<
+    null | "famine" | "coyotes" | "oncemore"
+  >(null);
   const [eventTimeLeft, setEventTimeLeft] = useState(0);
   const [timeOfDay, setTimeOfDay] = useState(0);
+  const [oncemoreIcons, setOncemoreIcons] = useState<
+    { id: number; x: number; y: number }[]
+  >([]);
+
+  const [oncemoreClicks, setOncemoreClicks] = useState(0);
 
   type TimePhase = "sunrise" | "day" | "sunset" | "night";
 
@@ -403,10 +412,15 @@ export default function App() {
 
         const roll = Math.random();
 
-        if (roll < 0.01) {
+        if (roll < 0.005) {
           setEventTimeLeft(40);
           document.body.classList.add("famine");
           return "famine";
+        }
+        if (roll < 0.01) {
+          setEventTimeLeft(999);
+          document.body.classList.add("oncemore");
+          return "oncemore";
         }
 
         if (roll < 0.018) {
@@ -454,6 +468,54 @@ export default function App() {
       setCarrotOpen(false);
       setShearsEquipped(false);
     }
+  };
+
+  useEffect(() => {
+    if (currentEvent === "oncemore") {
+      const icons = Array.from({ length: 10 }, () => ({
+        id: Date.now() + Math.random(),
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * 400 + 100,
+      }));
+
+      setOncemoreIcons(icons);
+      setOncemoreClicks(0);
+    } else {
+      setOncemoreIcons([]);
+    }
+  }, [currentEvent]);
+  useEffect(() => {
+    if (currentEvent !== "oncemore") return;
+
+    const stealInterval = setInterval(() => {
+      setMoney((prev) => Math.max(0, prev - 3));
+    }, 800);
+
+    return () => clearInterval(stealInterval);
+  }, [currentEvent]);
+  useEffect(() => {
+    if (currentEvent !== "oncemore") return;
+
+    const stealInterval = setInterval(() => {
+      setMoney((prev) => Math.max(0, prev - 3));
+    }, 800);
+
+    return () => clearInterval(stealInterval);
+  }, [currentEvent]);
+
+  const clickOncemoreIcon = (id: number) => {
+    setOncemoreIcons((prev) => prev.filter((icon) => icon.id !== id));
+
+    setOncemoreClicks((prev) => {
+      const newCount = prev + 1;
+
+      if (newCount >= 10) {
+        setCurrentEvent(null);
+        document.body.classList.remove("oncemore");
+      }
+
+      return newCount;
+    });
   };
 
   const interactWithSheep = (id: number) => {
@@ -630,6 +692,11 @@ export default function App() {
           {eventTimeLeft}s)
         </p>
       )}
+      {currentEvent === "oncemore" && (
+        <p className="eventWarning">
+          Once More... i'd say you should get rid of them ({oncemoreClicks}/10)
+        </p>
+      )}
       <div>
         <button className="buttton" onClick={carrotClick}>
           {carrotOpen ? "holding carrot" : `Carrot stack: ${carrotCount}`}
@@ -655,6 +722,22 @@ export default function App() {
             pointerEvents: "none",
           }}
           alt="coyote"
+        />
+      ))}
+      {oncemoreIcons.map((icon) => (
+        <img
+          key={icon.id}
+          src={oncemore}
+          className="oncemoreIcon"
+          style={{
+            position: "absolute",
+            left: `${icon.x}px`,
+            top: `${icon.y}px`,
+            width: "80px",
+            cursor: "pointer",
+          }}
+          onClick={() => clickOncemoreIcon(icon.id)}
+          alt="oncemore"
         />
       ))}
 
