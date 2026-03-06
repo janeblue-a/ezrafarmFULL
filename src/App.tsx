@@ -241,7 +241,7 @@ export default function App() {
 
             const healAmount =
               Math.floor(
-                Math.random() * (passive.minHeal - passive.minHeal + 1),
+                Math.random() * (passive.maxHeal - passive.minHeal + 1),
               ) + passive.minHeal;
 
             return {
@@ -488,7 +488,7 @@ export default function App() {
     if (currentEvent !== "oncemore") return;
 
     const stealInterval = setInterval(() => {
-      setMoney((prev) => Math.max(0, prev -  Math.ceil(Math.random() * 2)));
+      setMoney((prev) => Math.max(0, prev - Math.ceil(Math.random() * 2)));
     }, 800);
 
     return () => clearInterval(stealInterval);
