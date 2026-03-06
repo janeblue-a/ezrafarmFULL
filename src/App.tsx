@@ -488,16 +488,7 @@ export default function App() {
     if (currentEvent !== "oncemore") return;
 
     const stealInterval = setInterval(() => {
-      setMoney((prev) => Math.max(0, prev - 3));
-    }, 800);
-
-    return () => clearInterval(stealInterval);
-  }, [currentEvent]);
-  useEffect(() => {
-    if (currentEvent !== "oncemore") return;
-
-    const stealInterval = setInterval(() => {
-      setMoney((prev) => Math.max(0, prev - 3));
+      setMoney((prev) => Math.max(0, prev - 1));
     }, 800);
 
     return () => clearInterval(stealInterval);
