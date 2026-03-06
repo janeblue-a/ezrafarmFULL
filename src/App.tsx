@@ -195,6 +195,7 @@ export default function App() {
   const [currentEvent, setCurrentEvent] = useState<
     null | "famine" | "coyotes" | "oncemore"
   >(null);
+  const [marketOpen, setMarketOpen] = useState(false);
   const [eventTimeLeft, setEventTimeLeft] = useState(0);
   const [timeOfDay, setTimeOfDay] = useState(0);
   const [oncemoreIcons, setOncemoreIcons] = useState<
@@ -202,6 +203,44 @@ export default function App() {
   >([]);
 
   const [oncemoreClicks, setOncemoreClicks] = useState(0);
+  const [woolInventory, setWoolInventory] = useState({
+    normal: 0,
+    golden: 0,
+    ghost: 0,
+    denis: 0,
+  });
+
+  const [woolMarket, setWoolMarket] = useState({
+    normal: sheepConfig.normal.woolValue,
+    golden: sheepConfig.golden.woolValue,
+    ghost: sheepConfig.ghost.woolValue,
+    denis: sheepConfig.denis.woolValue,
+  });
+
+  const generateMarketPrices = () => {
+    setWoolMarket({
+      normal: Math.floor(
+        sheepConfig.normal.woolValue * (0.7 + Math.random() * 0.6),
+      ),
+      golden: Math.floor(
+        sheepConfig.golden.woolValue * (0.7 + Math.random() * 0.65),
+      ),
+      ghost: Math.floor(
+        sheepConfig.ghost.woolValue * (0.7 + Math.random() * 0.6),
+      ),
+      denis: Math.floor(
+        sheepConfig.denis.woolValue * (0.7 + Math.random() * 0.6),
+      ),
+    });
+  };
+
+  useEffect(() => {
+    const marketInterval = setInterval(() => {
+      generateMarketPrices();
+    }, 7000);
+
+    return () => clearInterval(marketInterval);
+  }, []);
 
   type TimePhase = "sunrise" | "day" | "sunset" | "night";
 
@@ -515,9 +554,10 @@ export default function App() {
         if (s.id !== id) return s;
 
         if (shearsEquipped && !s.isBald) {
-          const woolValue = sheepConfig[s.type].woolValue;
-
-          setMoney((prev) => prev + woolValue);
+          setWoolInventory((prev) => ({
+            ...prev,
+            [s.type]: prev[s.type] + 1,
+          }));
 
           const regrowSpeed = timePhase === "night" ? 23000 : 30000;
 
@@ -669,6 +709,17 @@ export default function App() {
     ));
   };
 
+  const sellWool = (type: SheepType) => {
+    if (woolInventory[type] <= 0) return;
+
+    setWoolInventory((prev) => ({
+      ...prev,
+      [type]: prev[type] - 1,
+    }));
+
+    setMoney((prev) => prev + woolMarket[type]);
+  };
+
   return (
     <div className={`gameRoot ${currentEvent === "famine" ? "famine" : ""}`}>
       <p className="power">Funds: ${money}</p>
@@ -804,6 +855,38 @@ export default function App() {
         <p onClick={shiftDialogue} className={`dialouge ${mosesHere}`}>
           {addLineBreaks(dialougeText)}
         </p>
+      </div>
+
+      <button
+        className="otherRight"
+        onClick={() => setMarketOpen((prev) => !prev)}
+      >
+        {marketOpen ? "Close Market" : "Wool Market"}
+      </button>
+      {marketOpen && (
+        <div className="market">
+          <h3>Wool Market</h3>
+
+          <p>Normal Wool Price: ${woolMarket.normal}</p>
+          <button onClick={() => sellWool("normal")}>Sell Normal Wool</button>
+
+          <p>Golden Wool Price: ${woolMarket.golden}</p>
+          <button onClick={() => sellWool("golden")}>Sell Golden Wool</button>
+
+          <p>Ghost Wool Price: ${woolMarket.ghost}</p>
+          <button onClick={() => sellWool("ghost")}>Sell Ghost Wool</button>
+
+          <p>Denis Wool Price: ${woolMarket.denis}</p>
+          <button onClick={() => sellWool("denis")}>Sell Denis Wool</button>
+        </div>
+      )}
+
+      <div className="woolPanel">
+        <h3>Wool Stock</h3>
+        <p>Normal: {woolInventory.normal}</p>
+        <p>Golden: {woolInventory.golden}</p>
+        <p>Ghost: {woolInventory.ghost}</p>
+        <p>Denis: {woolInventory.denis}</p>
       </div>
 
       <button
