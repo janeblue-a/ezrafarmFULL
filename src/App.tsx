@@ -312,6 +312,7 @@ export default function App() {
       mosesHere,
       currentEvent,
       eventTimeLeft,
+      woolInventory,
     };
     localStorage.setItem("ezrasheepsave", JSON.stringify(saveData));
   };
@@ -331,6 +332,7 @@ export default function App() {
     currentEvent,
     eventTimeLeft,
     shearsEquipped,
+      woolInventory,
   ]);
 
   useEffect(() => {
@@ -367,6 +369,14 @@ export default function App() {
       setMosesHere(data.mosesHere ?? "visible");
       setCurrentEvent(data.currentEvent ?? null);
       setEventTimeLeft(data.eventTimeLeft ?? 0);
+      setWoolInventory(
+        data.woolInventory ?? {
+          normal: 0,
+          golden: 0,
+          ghost: 0,
+          denis: 0,
+        },
+      );
     }
     setIsLoaded(true);
   }, []);
