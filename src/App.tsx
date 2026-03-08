@@ -124,6 +124,8 @@ interface Sheep {
   nextPassiveAt?: number | null;
 }
 
+const maxRep = 1.2;
+
 export default function App() {
   const isGameOver = useRef(false);
 
@@ -154,6 +156,22 @@ export default function App() {
       speech: "",
     };
   };
+
+  useEffect(() => {
+    const repInterval = setInterval(() => {
+      setSheeps((prev) => {
+        const healthySheep = prev.filter((s) => s.hunger > 80).length;
+
+        if (healthySheep >= prev.length && prev.length > 2) {
+          setRep((r) => Math.min(maxRep, r + 0.02));
+        }
+
+        return prev;
+      });
+    }, 8000);
+
+    return () => clearInterval(repInterval);
+  }, []);
 
   useEffect(() => {
     const regrowInterval = setInterval(() => {
@@ -216,20 +234,21 @@ export default function App() {
     ghost: sheepConfig.ghost.woolValue,
     denis: sheepConfig.denis.woolValue,
   });
+  const [rep, setRep] = useState(1);
 
   const generateMarketPrices = () => {
     setWoolMarket({
       normal: Math.floor(
-        sheepConfig.normal.woolValue * (0.7 + Math.random() * 0.6),
+        sheepConfig.normal.woolValue * ((0.7 + Math.random() * 0.6) * rep),
       ),
       golden: Math.floor(
-        sheepConfig.golden.woolValue * (0.7 + Math.random() * 0.65),
+        sheepConfig.golden.woolValue * ((0.7 + Math.random() * 0.65) * rep),
       ),
       ghost: Math.floor(
-        sheepConfig.ghost.woolValue * (0.7 + Math.random() * 0.6),
+        sheepConfig.ghost.woolValue * ((0.7 + Math.random() * 0.6) * rep),
       ),
       denis: Math.floor(
-        sheepConfig.denis.woolValue * (0.7 + Math.random() * 0.6),
+        sheepConfig.denis.woolValue * ((0.7 + Math.random() * 0.6) * rep),
       ),
     });
   };
@@ -313,6 +332,7 @@ export default function App() {
       currentEvent,
       eventTimeLeft,
       woolInventory,
+      rep,
     };
     localStorage.setItem("ezrasheepsave", JSON.stringify(saveData));
   };
@@ -333,6 +353,7 @@ export default function App() {
     eventTimeLeft,
     shearsEquipped,
     woolInventory,
+    rep,
   ]);
 
   useEffect(() => {
@@ -360,6 +381,7 @@ export default function App() {
         }) ?? [createSheep()],
       );
 
+      setRep(data.rep ?? 1);
       setCarrotCount(data.carrotCount ?? 10);
       setTreeCount(data.treeCount ?? 0);
       setMoney(data.money ?? 100);
@@ -401,8 +423,8 @@ export default function App() {
         const afterCoyotes =
           currentEvent === "coyotes"
             ? afterHunger.filter((s) => {
-                if (s.hunger < 45) {
-                  const wolfChance = 0.35;
+                if (s.hunger < 65) {
+                  const wolfChance = 0.27;
                   if (Math.random() < wolfChance) {
                     return false;
                   }
@@ -419,6 +441,7 @@ export default function App() {
           setMoney((prev) =>
             Math.max(0, prev - deadSheep.length * penaltyPerSheep),
           );
+          setRep((prev) => Math.max(0, prev - deadSheep.length * 0.2));
         }
 
         if (aliveSheep.length === 0) {
@@ -438,6 +461,21 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, [isLoaded, currentEvent, timePhase]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    if (rep <= 0) {
+      isGameOver.current = true;
+
+      alert(
+        "you shouldntve killed all those sheep man, nobody's buying anymore",
+      );
+
+      localStorage.removeItem("ezrasheepsave");
+      window.location.reload();
+    }
+  }, [rep, isLoaded]);
 
   useEffect(() => {
     if (currentEvent === "coyotes") {
@@ -653,15 +691,15 @@ export default function App() {
   };
 
   const buyCarrots = () => {
-    if (money >= 20 && shopIsOpen) {
+    if (money >= 20 / rep && shopIsOpen) {
       setCarrotCount((prev) => prev + 15);
-      setMoney((prev) => prev - 20);
+      setMoney((prev) => prev - 20 / rep);
     }
   };
 
   const buyTreeLeaves = () => {
-    if (money >= 35 && shopIsOpen) {
-      setMoney((prev) => prev - 35);
+    if (money >= 35 / rep && shopIsOpen) {
+      setMoney((prev) => prev - 35 / rep);
       setTreevis("treebutton");
       setTreeCount((prev) => prev + 10);
     }
