@@ -33,7 +33,7 @@ const sheepConfig = {
     hungerDrain: 1,
     carrotValue: 15,
     treeValue: 35,
-    spawnChance: 0.03,
+    spawnChance: 0.02,
   },
   ghost: {
     image: ghostSheep,
@@ -332,7 +332,7 @@ export default function App() {
     currentEvent,
     eventTimeLeft,
     shearsEquipped,
-      woolInventory,
+    woolInventory,
   ]);
 
   useEffect(() => {
