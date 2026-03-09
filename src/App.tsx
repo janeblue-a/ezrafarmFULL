@@ -939,14 +939,14 @@ export default function App() {
         <br />
         <br />
         <button className={`shopping ${shop}`} onClick={buyCarrots}>
-          Buy 15 Carrots (20)
+          Buy 15 Carrots (${Math.ceil(20 / rep)})
         </button>
         <br />
         <br />
         <br />
         <br />
         <button className={`shopping ${shop}`} onClick={buyTreeLeaves}>
-          Buy 10 Tree Leaf Bundles (35)
+          Buy 10 Tree Leaf Bundles (${Math.ceil(35 / rep)})
         </button>
         <br />
         <br />
