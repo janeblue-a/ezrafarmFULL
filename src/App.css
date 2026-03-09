@@ -45,6 +45,24 @@
 
 
 
+.catalogue {
+  text-align: center;
+ 
+}
+
+.catalogueEntry {
+  border: 2px solid black;
+  border-radius: 3px;
+  margin: 10px;
+  padding: 10px;
+  display: inline-block;
+}
+
+.unknownSheep {
+  width:120px;
+  height:120px;
+  background:black;
+}
 body {
   background-image: url('https://images.pexels.com/photos/1198507/pexels-photo-1198507.jpeg');
   background-repeat: repeat; 
@@ -296,6 +314,14 @@ color: black;
 .otherRight {
   position: absolute; 
   left: 93%;
+  background-size: 105%;
+  background-color: bisque;
+  height: 65px;
+  color: black;
+}
+.otherRightAgain {
+  position: absolute !important; 
+  left: 91%;
   background-size: 105%;
   background-color: bisque;
   height: 65px;
