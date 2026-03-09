@@ -26,6 +26,15 @@ const sheepConfig = {
     treeValue: 35,
     spawnChance: 0.8,
   },
+  crown: {
+    image: crownSheep,
+    baldImage: baldCrown,
+    woolValue: 65,
+    hungerDrain: 0.8,
+    carrotValue: 17,
+    treeValue: 38,
+    spawnChance: 0.05,
+  },
   golden: {
     image: goldenSheep,
     baldImage: baldGolden,
@@ -58,15 +67,6 @@ const sheepConfig = {
       maxInterval: 30000,
       minHeal: 8,
       maxHeal: 12,
-    },
-    crown: {
-      image: crownSheep,
-      baldImage: baldCrown,
-      woolValue: 65,
-      hungerDrain: 0.8,
-      carrotValue: 17,
-      treeValue: 38,
-      spawnChance: 0.05,
     },
   },
 };
@@ -226,6 +226,7 @@ export default function App() {
     golden: 0,
     ghost: 0,
     denis: 0,
+    crown: 0,
   });
 
   const [woolMarket, setWoolMarket] = useState({
@@ -233,8 +234,28 @@ export default function App() {
     golden: sheepConfig.golden.woolValue,
     ghost: sheepConfig.ghost.woolValue,
     denis: sheepConfig.denis.woolValue,
+    crown: sheepConfig.crown.woolValue,
   });
   const [rep, setRep] = useState(1);
+  const [discoveredSheep, setDiscoveredSheep] = useState<
+    Record<SheepType, boolean>
+  >({
+    normal: false,
+    golden: false,
+    ghost: false,
+    denis: false,
+    crown: false,
+  });
+  const [page, setPage] = useState<"game" | "catalogue">("game");
+
+  useEffect(() => {
+    sheeps.forEach((s) => {
+      setDiscoveredSheep((prev) => ({
+        ...prev,
+        [s.type]: true,
+      }));
+    });
+  }, [sheeps]);
 
   const generateMarketPrices = () => {
     setWoolMarket({
@@ -249,6 +270,9 @@ export default function App() {
       ),
       denis: Math.floor(
         sheepConfig.denis.woolValue * ((0.7 + Math.random() * 0.6) * rep),
+      ),
+      crown: Math.floor(
+        sheepConfig.crown.woolValue * ((0.7 + Math.random() * 0.6) * rep),
       ),
     });
   };
@@ -273,7 +297,7 @@ export default function App() {
   const timePhase = getTimePhase(timeOfDay);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || page !== "game") return;
 
     const dayInterval = setInterval(() => {
       setTimeOfDay((prev) => (prev + 1) % 240);
@@ -283,6 +307,7 @@ export default function App() {
   }, [isLoaded]);
 
   useEffect(() => {
+    if (page !== "game") return;
     const interval = setInterval(
       () => {
         setSheeps((prevSheep) => {
@@ -333,6 +358,7 @@ export default function App() {
       eventTimeLeft,
       woolInventory,
       rep,
+      discoveredSheep,
     };
     localStorage.setItem("ezrasheepsave", JSON.stringify(saveData));
   };
@@ -380,6 +406,14 @@ export default function App() {
           };
         }) ?? [createSheep()],
       );
+      setDiscoveredSheep(
+        data.discoveredSheep ?? {
+          normal: false,
+          golden: false,
+          ghost: false,
+          denis: false,
+        },
+      );
 
       setRep(data.rep ?? 1);
       setCarrotCount(data.carrotCount ?? 10);
@@ -397,6 +431,7 @@ export default function App() {
           golden: 0,
           ghost: 0,
           denis: 0,
+          crown: 0,
         },
       );
     }
@@ -404,7 +439,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || page !== "game") return;
 
     const interval = setInterval(() => {
       setSheeps((prevSheeps) => {
@@ -460,7 +495,7 @@ export default function App() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isLoaded, currentEvent, timePhase]);
+  }, [isLoaded, currentEvent, timePhase, page]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -491,7 +526,7 @@ export default function App() {
     }
   }, [currentEvent]);
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || page !== "game") return;
 
     const eventRoll = setInterval(() => {
       setCurrentEvent((prev) => {
@@ -768,6 +803,37 @@ export default function App() {
     setMoney((prev) => prev + woolMarket[type]);
   };
 
+  if (page === "catalogue") {
+    return (
+      <div className="catalogue">
+        <h1 className="power">Sheep Catalogue</h1>
+
+        {Object.keys(sheepConfig).map((type) => {
+          const t = type as SheepType;
+          const discovered = discoveredSheep[t];
+
+          return (
+            <div key={t} className="catalogueEntry">
+              {discovered ? (
+                <>
+                  <img src={sheepConfig[t].image} width={120} />
+                  <p>{t} sheep</p>
+                </>
+              ) : (
+                <>
+                  <div className="unknownSheep">???</div>
+                  <p>Unknown Sheep</p>
+                </>
+              )}
+            </div>
+          );
+        })}
+
+        <button onClick={() => setPage("game")}>Back</button>
+      </div>
+    );
+  }
+
   return (
     <div className={`gameRoot ${currentEvent === "famine" ? "famine" : ""}`}>
       <p className="power">Funds: ${money}</p>
@@ -904,13 +970,19 @@ export default function App() {
           {addLineBreaks(dialougeText)}
         </p>
       </div>
-
+      <button className="otherRightAgain" onClick={() => setPage("catalogue")}>
+        Catalogue
+      </button>
+      <br />
+      <br />
+      <br />
       <button
         className="otherRight"
         onClick={() => setMarketOpen((prev) => !prev)}
       >
         {marketOpen ? "Close Market" : "Wool Market"}
       </button>
+
       {marketOpen && (
         <div className="market">
           <h3>Wool Market</h3>
@@ -926,6 +998,9 @@ export default function App() {
 
           <p>Denis Wool Price: ${woolMarket.denis}</p>
           <button onClick={() => sellWool("denis")}>Sell Denis Wool</button>
+
+          <p>Crown Wool Price: ${woolMarket.crown}</p>
+          <button onClick={() => sellWool("crown")}>Sell Crown Wool</button>
         </div>
       )}
 
@@ -935,6 +1010,7 @@ export default function App() {
         <p>Golden: {woolInventory.golden}</p>
         <p>Ghost: {woolInventory.ghost}</p>
         <p>Denis: {woolInventory.denis}</p>
+        <p>Crown: {woolInventory.crown}</p>
       </div>
 
       <button
