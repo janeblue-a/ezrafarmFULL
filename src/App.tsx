@@ -13,8 +13,95 @@ import crownSheep from "./Images/crownSheep.png";
 import baldCrown from "./Images/crownbald.png";
 import coyote from "./Images/VespaCoyote.png";
 import oncemore from "./Images/oncemore.png";
+import rainbpw from "./Images/Rainbowcina.png";
 
 let shopIsOpen = false;
+
+type AchievementId = "firstSheep" | "shepherd" | "pissyellow" | "overflow";
+
+type GameState = {
+  sheepCount: number;
+  money: number;
+  woolSold: number;
+  sheepTypes: SheepType[];
+};
+
+type Achievement = {
+  id: AchievementId;
+  name: string;
+  description: string;
+  check: (state: GameState) => boolean;
+  reward?: (game: RewardContext) => void;
+};
+
+type RewardContext = {
+  addMoney: (amount: number) => void;
+  addCarrots: (amount: number) => void;
+  addTrees: (amount: number) => void;
+};
+
+const achievementsList: Achievement[] = [
+  {
+    id: "firstSheep",
+    name: "A New Beginning",
+    description: "Own more than one sheep",
+    check: (s) => s.sheepCount > 1,
+    reward: (g) => g.addMoney(50),
+  },
+  {
+    id: "shepherd",
+    name: "Sheep Army",
+    description: "Own 10 sheep",
+    check: (s) => s.sheepCount >= 10,
+    reward: (g) => g.addMoney(50),
+  },
+  {
+    id: "pissyellow",
+    name: "Shiny!",
+    description: "Discover a golden sheep",
+    check: (s) => s.sheepTypes.includes("golden"),
+    reward: (g) => g.addMoney(50),
+  },
+  {
+    id: "overflow",
+    name: "What is Cost",
+    description: "Reach $1000",
+    check: (s) => s.money >= 1000,
+    reward: (g) => g.addMoney(50),
+  },
+];
+
+const sheepCatalogueText: Record<SheepType, string[]> = {
+  normal: [
+    "Just a regular sheep.",
+    "Nothing special. Probably.",
+    "Certified fluffy.",
+    "Average sheep moment.",
+  ],
+
+  golden: [
+    "12 carrot.",
+    "worth more than you",
+    "Shiny creature.",
+    "The economy loves this one.",
+  ],
+
+  ghost: [
+    "worth the wait",
+    "why is it translucent",
+    "is this thing alive?",
+    "you can shear a ghost???",
+  ],
+
+  denis: ["edgy", "kind capo", "brooding creature", "might heal others"],
+
+  crown: [
+    "She-ep used to rule this world",
+    "it's araya sheep",
+    "thanks skitty_gnocchi for helping test the game!",
+    "those who bow",
+  ],
+};
 
 const sheepConfig = {
   normal: {
@@ -97,7 +184,7 @@ const sheepLines = {
     "taxes?",
     "existence is hay.",
     "baa means baa.",
-    "i still see your shadows in my room",
+    "i still see your shadows in my wool",
     "I've had ENOUGH of this!!!",
   ],
   ominous: [
@@ -192,11 +279,16 @@ export default function App() {
     return () => clearInterval(regrowInterval);
   }, []);
 
+  type Coyote = {
+    id: number;
+    x: number;
+    y: number;
+    targetSheepId: number;
+  };
+
   const [sheeps, setSheeps] = useState<Sheep[]>([createSheep()]);
 
-  const [coyotes, setCoyotes] = useState<
-    { id: number; x: number; y: number }[]
-  >([]);
+  const [coyotes, setCoyotes] = useState<Coyote[]>([]);
   const [carrotCount, setCarrotCount] = useState(10);
   const [carrotOpen, setCarrotOpen] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
@@ -213,7 +305,18 @@ export default function App() {
   const [currentEvent, setCurrentEvent] = useState<
     null | "famine" | "coyotes" | "oncemore"
   >(null);
+  const [catalogueFlavor, setCatalogueFlavor] = useState<
+    Record<SheepType, string>
+  >({
+    normal: "",
+    golden: "",
+    ghost: "",
+    denis: "",
+    crown: "",
+  });
   const [marketOpen, setMarketOpen] = useState(false);
+  const [achievements, setAchievements] = useState<Record<string, boolean>>({});
+  const [woolSold, setWoolSold] = useState(0);
   const [eventTimeLeft, setEventTimeLeft] = useState(0);
   const [timeOfDay, setTimeOfDay] = useState(0);
   const [oncemoreIcons, setOncemoreIcons] = useState<
@@ -246,14 +349,68 @@ export default function App() {
     denis: false,
     crown: false,
   });
-  const [page, setPage] = useState<"game" | "catalogue">("game");
+  const [page, setPage] = useState<"game" | "catalogue" | "achievements">(
+    "game",
+  );
+  const [toasts, setToasts] = useState<
+    { id: number; title: string; text: string; moretext: string }[]
+  >([]);
+
+  const showToast = (title: string, text: string, moretext: string) => {
+    const id = Date.now() + Math.random();
+
+    setToasts((prev) => [...prev, { id, title, text, moretext }]);
+
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3500);
+  };
 
   useEffect(() => {
+    const state: GameState = {
+      sheepCount: sheeps.length,
+      money,
+      woolSold,
+      sheepTypes: sheeps.map((s) => s.type),
+    };
+
+    checkAchievements(state);
+  }, [sheeps, money, woolSold]);
+  const checkAchievements = (state: GameState) => {
+    setAchievements((prev) => {
+      const updated = { ...prev };
+
+      achievementsList.forEach((a) => {
+        if (!updated[a.id] && a.check(state)) {
+          updated[a.id] = true;
+
+          showToast("Oooooh! New achievement:", a.name, a.description);
+
+          if (a.reward) {
+            a.reward({
+              addMoney: (amount) => setMoney((m) => m + amount),
+              addCarrots: (amount) => setCarrotCount((c) => c + amount),
+              addTrees: (amount) => setTreeCount((t) => t + amount),
+            });
+          }
+        }
+      });
+
+      return updated;
+    });
+  };
+  useEffect(() => {
     sheeps.forEach((s) => {
-      setDiscoveredSheep((prev) => ({
-        ...prev,
-        [s.type]: true,
-      }));
+      setDiscoveredSheep((prev) => {
+        if (!prev[s.type]) {
+          setRep((r) => Math.min(maxRep, r + 0.02));
+        }
+
+        return {
+          ...prev,
+          [s.type]: true,
+        };
+      });
     });
   }, [sheeps]);
 
@@ -304,7 +461,7 @@ export default function App() {
     }, 550);
 
     return () => clearInterval(dayInterval);
-  }, [isLoaded]);
+  }, [isLoaded, page]);
 
   useEffect(() => {
     if (page !== "game") return;
@@ -359,6 +516,7 @@ export default function App() {
       woolInventory,
       rep,
       discoveredSheep,
+      achievements,
     };
     localStorage.setItem("ezrasheepsave", JSON.stringify(saveData));
   };
@@ -380,6 +538,7 @@ export default function App() {
     shearsEquipped,
     woolInventory,
     rep,
+    achievements,
   ]);
 
   useEffect(() => {
@@ -414,7 +573,7 @@ export default function App() {
           denis: false,
         },
       );
-
+      setAchievements(data.achievements ?? {});
       setRep(data.rep ?? 1);
       setCarrotCount(data.carrotCount ?? 10);
       setTreeCount(data.treeCount ?? 0);
@@ -510,21 +669,68 @@ export default function App() {
       localStorage.removeItem("ezrasheepsave");
       window.location.reload();
     }
-  }, [rep, isLoaded]);
+  }, [rep, isLoaded, page]);
 
   useEffect(() => {
     if (currentEvent === "coyotes") {
-      const newCoyotes = Array.from({ length: 3 }, () => ({
-        id: Date.now() + Math.random(),
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * 300 + 150,
-      }));
+      const newCoyotes = Array.from({ length: 4 }, () => {
+        const target = randomFrom(sheeps);
+
+        return {
+          id: Date.now() + Math.random(),
+          x: Math.random() * window.innerWidth,
+          y: 50,
+          targetSheepId: target.id,
+        };
+      });
 
       setCoyotes(newCoyotes);
     } else {
       setCoyotes([]);
     }
   }, [currentEvent]);
+  useEffect(() => {
+    if (currentEvent !== "coyotes") return;
+
+    const interval = setInterval(() => {
+      setCoyotes((prev) =>
+        prev.map((c) => {
+          const target = sheeps.find((s) => s.id === c.targetSheepId);
+          if (!target) return c;
+
+          const dx = Math.random() * 4 - 2;
+          const dy = Math.random() * 4;
+
+          return {
+            ...c,
+            x: c.x + dx,
+            y: c.y + dy,
+          };
+        }),
+      );
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [currentEvent, sheeps]);
+  useEffect(() => {
+    if (currentEvent !== "coyotes") return;
+
+    const stealInterval = setInterval(() => {
+      if (coyotes.length === 0) return;
+
+      setSheeps((prev) => {
+        if (prev.length === 0) return prev;
+
+        const index = Math.floor(Math.random() * prev.length);
+        const newSheep = [...prev];
+        newSheep.splice(index, 1);
+
+        return newSheep;
+      });
+    }, 5500);
+
+    return () => clearInterval(stealInterval);
+  }, [currentEvent, coyotes]);
   useEffect(() => {
     if (!isLoaded || page !== "game") return;
 
@@ -556,7 +762,7 @@ export default function App() {
     }, 5500);
 
     return () => clearInterval(eventRoll);
-  }, [isLoaded]);
+  }, [isLoaded, page]);
 
   useEffect(() => {
     if (!currentEvent) return;
@@ -565,7 +771,9 @@ export default function App() {
       setEventTimeLeft((prev) => {
         if (prev <= 1) {
           setCurrentEvent(null);
-
+          if (currentEvent === "famine" && eventTimeLeft <= 1) {
+            setRep((r) => Math.min(maxRep, r + 0.03));
+          }
           document.body.classList.remove("famine");
           return 0;
         }
@@ -590,6 +798,10 @@ export default function App() {
       setCarrotOpen(false);
       setShearsEquipped(false);
     }
+  };
+
+  const scareCoyote = (id: number) => {
+    setCoyotes((prev) => prev.filter((c) => c.id !== id));
   };
 
   useEffect(() => {
@@ -660,7 +872,7 @@ export default function App() {
           const config = sheepConfig[s.type];
           const carrotValue =
             currentEvent === "famine"
-              ? Math.floor(config.carrotValue * 0.9)
+              ? Math.floor(config.carrotValue * 0.75)
               : config.carrotValue;
           return { ...s, hunger: Math.min(s.hunger + carrotValue, 100) };
         }
@@ -672,7 +884,7 @@ export default function App() {
           const config = sheepConfig[s.type];
           const treeValue =
             currentEvent === "famine"
-              ? Math.floor(config.treeValue * 0.9)
+              ? Math.floor(config.treeValue * 0.75)
               : config.treeValue;
           return { ...s, hunger: Math.min(s.hunger + treeValue, 100) };
         }
@@ -794,15 +1006,53 @@ export default function App() {
 
   const sellWool = (type: SheepType) => {
     if (woolInventory[type] <= 0) return;
-
+    setWoolSold((prev) => prev + 1);
     setWoolInventory((prev) => ({
       ...prev,
       [type]: prev[type] - 1,
     }));
 
     setMoney((prev) => prev + woolMarket[type]);
+    if (type === "golden") setRep((r) => Math.min(maxRep, r + 0.01));
+    if (type === "crown") setRep((r) => Math.min(maxRep, r + 0.015));
   };
 
+  useEffect(() => {
+    if (page === "catalogue") {
+      const newFlavor: Record<SheepType, string> = {
+        normal: randomFrom(sheepCatalogueText.normal),
+        golden: randomFrom(sheepCatalogueText.golden),
+        ghost: randomFrom(sheepCatalogueText.ghost),
+        denis: randomFrom(sheepCatalogueText.denis),
+        crown: randomFrom(sheepCatalogueText.crown),
+      };
+
+      setCatalogueFlavor(newFlavor);
+    }
+  }, [page]);
+  if (page === "achievements") {
+    return (
+      <div className="achievementsPage">
+        <h1 className="power">Achievements</h1>
+
+        {achievementsList.map((a) => {
+          const unlocked = achievements[a.id];
+
+          return (
+            <div
+              key={a.id}
+              className={`achievementEntry ${unlocked ? "unlocked" : "locked"}`}
+            >
+              <h3>{unlocked ? a.name : "???"}</h3>
+              <p>{unlocked ? a.description : "Locked Achievement"}</p>
+            </div>
+          );
+        })}
+
+        <button onClick={() => setPage("game")}>Back</button>
+      </div>
+    );
+  }
   if (page === "catalogue") {
     return (
       <div className="catalogue">
@@ -818,6 +1068,7 @@ export default function App() {
                 <>
                   <img src={sheepConfig[t].image} width={120} />
                   <p>{t} sheep</p>
+                  <p>{catalogueFlavor[t]}</p>
                 </>
               ) : (
                 <>
@@ -844,8 +1095,8 @@ export default function App() {
       )}
       {currentEvent === "coyotes" && (
         <p className="eventWarning">
-          There are spooky scary Vespas hunting weak sheep, watch out (
-          {eventTimeLeft}s)
+          There are spooky scary Vespas hunting weak sheep, scare 'em off with
+          your mouse ({eventTimeLeft}s)
         </p>
       )}
       {currentEvent === "oncemore" && (
@@ -875,9 +1126,9 @@ export default function App() {
             left: `${w.x}px`,
             top: `${w.y}px`,
             width: "120px",
-            pointerEvents: "none",
+            cursor: "pointer",
           }}
-          alt="coyote"
+          onClick={() => scareCoyote(w.id)}
         />
       ))}
       {oncemoreIcons.map((icon) => (
@@ -970,12 +1221,6 @@ export default function App() {
           {addLineBreaks(dialougeText)}
         </p>
       </div>
-      <button className="otherRightAgain" onClick={() => setPage("catalogue")}>
-        Catalogue
-      </button>
-      <br />
-      <br />
-      <br />
       <button
         className="otherRight"
         onClick={() => setMarketOpen((prev) => !prev)}
@@ -983,6 +1228,21 @@ export default function App() {
         {marketOpen ? "Close Market" : "Wool Market"}
       </button>
 
+      <br />
+      <br />
+      <br />
+      <button className="otherRightAgain" onClick={() => setPage("catalogue")}>
+        Catalogue
+      </button>
+      <br />
+      <br />
+      <br />
+      <button
+        className="otherRightAgainAgain"
+        onClick={() => setPage("achievements")}
+      >
+        Achievements
+      </button>
       {marketOpen && (
         <div className="market">
           <h3>Wool Market</h3>
@@ -1033,6 +1293,16 @@ export default function App() {
       >
         New Game
       </button>
+      <img src={rainbpw} className="tiny"></img>
+      <div className="toastContainer">
+        {toasts.map((t) => (
+          <div key={t.id} className="toast">
+            <strong>{t.title}</strong>
+            <h3>{t.text}</h3>
+            <p>{t.moretext}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
