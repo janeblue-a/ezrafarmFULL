@@ -77,6 +77,7 @@ const sheepCatalogueText: Record<SheepType, string[]> = {
     "Nothing special. Probably.",
     "Certified fluffy.",
     "Average sheep moment.",
+    "Did you think it would transform?",
   ],
 
   golden: [
@@ -940,13 +941,13 @@ export default function App() {
   const buyCarrots = () => {
     if (money >= 20 / rep && shopIsOpen) {
       setCarrotCount((prev) => prev + 15);
-      setMoney((prev) => prev - 20 / rep);
+      setMoney((prev) => prev - Math.floor(20 / rep));
     }
   };
 
   const buyTreeLeaves = () => {
     if (money >= 35 / rep && shopIsOpen) {
-      setMoney((prev) => prev - 35 / rep);
+      setMoney((prev) => prev - Math.floor(35 / rep));
       setTreevis("treebutton");
       setTreeCount((prev) => prev + 10);
     }
@@ -972,6 +973,13 @@ export default function App() {
       setShop("vis");
     }
   };
+
+  useEffect(() => {
+    if (timePhase === "night" && shopIsOpen) {
+      shopIsOpen = false;
+      setShop("invis");
+    }
+  }, [timePhase]);
 
   const shiftDialogue = () => {
     setDialogueCount((prev) => prev + 1);
