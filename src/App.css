@@ -321,12 +321,21 @@ color: black;
 }
 .otherRightAgain {
   position: absolute !important; 
-  left: 91%;
+  left: 91.5%;
   background-size: 105%;
   background-color: bisque;
   height: 65px;
   color: black;
 }
+.otherRightAgainAgain {
+  position: absolute !important; 
+  left: 89%;
+  background-size: 105%;
+  background-color: bisque;
+  height: 65px;
+  color: black;
+}
+
 
 .shopping {
   position: absolute; 
@@ -478,3 +487,57 @@ color: black;
 }
 
 
+.toastContainer {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  background: #222;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  min-width: 180px;
+  box-shadow: 0px 4px 12px rgba(0,0,0,0.4);
+  animation: toastSlide 0.4s ease;
+}
+
+.toast strong {
+  color: gold;
+}
+
+@keyframes toastSlide {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.achievementEntry {
+  border: 2px solid black;
+  padding: 10px;
+  margin: 10px;
+  width: 250px;
+}
+
+.achievementEntry.locked {
+  opacity: 0.4;
+}
+
+.achievementEntry.unlocked {
+  background-color: gold;
+}
+
+.tiny {
+  width: 20px !important;
+  height: 20px;
+  right: 9px;
+}
