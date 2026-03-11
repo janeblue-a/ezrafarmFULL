@@ -123,8 +123,10 @@ body.sunset::before {
 
 .woolPanel {
   position: fixed;
-  left: 20px;
-  top: 520px;
+  left: 130px;
+  bottom: 0;
+    transform: translateY(-50%);
+  transition: transform 0.05s linear;
 
   width: 200px;
   padding: 14px;
@@ -136,6 +138,15 @@ body.sunset::before {
 
   font-family: monospace;
   z-index: 999;
+}
+
+.panelHandle {
+  width: 60px;
+  height: 6px;
+  background: #888;
+  border-radius: 4px;
+  margin: 8px auto 12px auto;
+  cursor: grab;
 }
 
 .market {
@@ -499,8 +510,8 @@ color: black;
 }
 
 .toast {
-  background: #222;
-  color: white;
+  background: #f7f2d0;
+  color: rgb(0, 0, 0);
   padding: 12px 16px;
   border-radius: 8px;
   min-width: 180px;
@@ -511,7 +522,7 @@ color: black;
 }
 
 .toast strong {
-  color: gold;
+  color: rgb(63, 54, 0);
 }
 
 @keyframes toastSlide {
@@ -562,10 +573,10 @@ color: black;
 
   overflow-y: auto;
 
-  background: rgba(0, 0, 0, 0.9);
+  background: #f7f2d0;
   border: 3px solid black;
   padding: 10px;
-
+color: black;
   z-index: 500;
 }
 
