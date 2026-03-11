@@ -502,6 +502,7 @@ color: black;
   position: fixed;
   bottom: 20px;
   right: 20px;
+  box-shadow: 4px 4px 0px black;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -567,6 +568,7 @@ color: black;
   position: fixed;
   left: 10px;
   top: 30px;
+  box-shadow: 4px 4px 0px black;
 
   width: 220px;
   max-height: 70vh;
