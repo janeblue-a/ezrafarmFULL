@@ -208,6 +208,7 @@ interface Sheep {
   image: string;
   isBald: boolean;
   speech: string;
+  name: string;
   regrowAt?: number | null;
   nextPassiveAt?: number | null;
 }
@@ -242,6 +243,7 @@ export default function App() {
       image: config.image,
       isBald: false,
       speech: "",
+      name: "Unnamed Sheep",
     };
   };
 
@@ -353,9 +355,17 @@ export default function App() {
   const [page, setPage] = useState<"game" | "catalogue" | "achievements">(
     "game",
   );
-  const [toasts, setToasts] = useState<
-    { id: number; title: string; text: string; moretext: string }[]
-  >([]);
+  type Toast = {
+    id: number;
+    title: string;
+    text: string;
+    moretext?: string;
+    input?: boolean;
+    onSubmit?: (value: string) => void;
+  };
+
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [toastInput, setToastInput] = useState("");
 
   const showToast = (title: string, text: string, moretext: string) => {
     const id = Date.now() + Math.random();
@@ -557,6 +567,7 @@ export default function App() {
           return {
             ...s,
             type,
+            name: s.name ?? "Unnamed Sheep",
             isBald: isStillBald,
             regrowAt: isStillBald ? s.regrowAt : null,
             speech: "",
@@ -1025,6 +1036,62 @@ export default function App() {
     if (type === "crown") setRep((r) => Math.min(maxRep, r + 0.015));
   };
 
+  const showRenameToast = (sheepId: number) => {
+    const id = Date.now();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id,
+        title: "Name Sheep",
+        text: "Enter a name:",
+        input: true,
+        onSubmit: (value: string) => {
+          setSheeps((prevSheeps) =>
+            prevSheeps.map((s) =>
+              s.id === sheepId ? { ...s, name: value.slice(0, 20) } : s,
+            ),
+          );
+
+          setToasts((prev) => prev.filter((t) => t.id !== id));
+        },
+      },
+    ]);
+  };
+
+  const feedSheep = (id: number, food: "carrot" | "tree") => {
+    setSheeps((prevSheeps) =>
+      prevSheeps.map((s) => {
+        if (s.id !== id) return s;
+
+        const config = sheepConfig[s.type];
+
+        if (food === "carrot" && carrotCount > 0) {
+          setCarrotCount((c) => c - 1);
+
+          const carrotValue =
+            currentEvent === "famine"
+              ? Math.floor(config.carrotValue * 0.75)
+              : config.carrotValue;
+
+          return { ...s, hunger: Math.min(100, s.hunger + carrotValue) };
+        }
+
+        if (food === "tree" && treeCount > 0) {
+          setTreeCount((t) => t - 1);
+
+          const treeValue =
+            currentEvent === "famine"
+              ? Math.floor(config.treeValue * 0.75)
+              : config.treeValue;
+
+          return { ...s, hunger: Math.min(100, s.hunger + treeValue) };
+        }
+
+        return s;
+      }),
+    );
+  };
   useEffect(() => {
     if (page === "catalogue") {
       const newFlavor: Record<SheepType, string> = {
@@ -1095,6 +1162,50 @@ export default function App() {
 
   return (
     <div className={`gameRoot ${currentEvent === "famine" ? "famine" : ""}`}>
+      <div className="sheepSidebar">
+        <h3>The Farm ({sheeps.length})</h3>
+
+        {sheeps.map((s) => (
+          <div key={s.id} className="sheepListEntry">
+            <span className="sheepListName">{s.name}</span>
+            <span className="sheepListType">({s.type})</span>
+
+            <div className="sidebarHungerBar">
+              <div
+                className="sidebarHungerFill"
+                style={{
+                  width: `${s.hunger}%`,
+                  background:
+                    s.hunger > 60
+                      ? "limegreen"
+                      : s.hunger > 30
+                        ? "gold"
+                        : "red",
+                }}
+              />
+            </div>
+
+            <div className="sidebarButtons">
+              <p>Feed</p>
+              <button
+                disabled={carrotCount <= 0}
+                onClick={() => feedSheep(s.id, "carrot")}
+              >
+                Carrot
+              </button>
+
+              <button
+                disabled={treeCount <= 0}
+                onClick={() => feedSheep(s.id, "tree")}
+              >
+                Bag
+              </button>
+
+              <button onClick={() => showRenameToast(s.id)}>Rename</button>
+            </div>
+          </div>
+        ))}
+      </div>
       <p className="power">Funds: ${money}</p>
       {currentEvent === "famine" && (
         <p className="eventWarning">
@@ -1162,6 +1273,8 @@ export default function App() {
       >
         {sheeps.map((s) => (
           <div key={s.id} className="sheepWrapper">
+            <p className="sheepName">{s.name}</p>
+            <br />
             <div className="sheepImageContainer">
               {s.speech && <p className="sheepSpeech">{s.speech}</p>}
 
@@ -1186,6 +1299,7 @@ export default function App() {
               src={s.image}
               alt="sheep"
             />
+            <button onClick={() => showRenameToast(s.id)}>Rename</button>
           </div>
         ))}
       </div>
@@ -1307,7 +1421,28 @@ export default function App() {
           <div key={t.id} className="toast">
             <strong>{t.title}</strong>
             <h3>{t.text}</h3>
-            <p>{t.moretext}</p>
+
+            {t.input && (
+              <>
+                <input
+                  type="text"
+                  maxLength={20}
+                  value={toastInput}
+                  onChange={(e) => setToastInput(e.target.value)}
+                />
+                <br />
+                <button
+                  onClick={() => {
+                    if (t.onSubmit) t.onSubmit(toastInput);
+                    setToastInput("");
+                  }}
+                >
+                  Confirm
+                </button>
+              </>
+            )}
+
+            {t.moretext && <p>{t.moretext}</p>}
           </div>
         ))}
       </div>
