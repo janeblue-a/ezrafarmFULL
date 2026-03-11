@@ -366,6 +366,41 @@ export default function App() {
 
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [toastInput, setToastInput] = useState("");
+  const [panelY, setPanelY] = useState(0);
+  const draggingPanel = useRef(false);
+  const dragStartY = useRef(0);
+
+  const panelMin = 20;
+  const panelMax = 215;
+
+  useEffect(() => {
+    window.addEventListener("mousemove", dragPanel);
+    window.addEventListener("mouseup", stopDragPanel);
+
+    return () => {
+      window.removeEventListener("mousemove", dragPanel);
+      window.removeEventListener("mouseup", stopDragPanel);
+    };
+  }, []);
+
+  const startDragPanel = (e: { clientY: number }) => {
+    draggingPanel.current = true;
+    dragStartY.current = e.clientY - panelY;
+  };
+
+  const dragPanel = (e: { clientY: number }) => {
+    if (!draggingPanel.current) return;
+
+    let newY = e.clientY - dragStartY.current;
+
+    newY = Math.max(panelMin, Math.min(panelMax, newY));
+
+    setPanelY(newY);
+  };
+
+  const stopDragPanel = () => {
+    draggingPanel.current = false;
+  };
 
   const showToast = (title: string, text: string, moretext: string) => {
     const id = Date.now() + Math.random();
@@ -1295,11 +1330,11 @@ export default function App() {
             </div>
             <img
               onClick={() => interactWithSheep(s.id)}
+              onDoubleClick={() => showRenameToast(s.id)}
               className="ezrasheep"
               src={s.image}
               alt="sheep"
             />
-            <button onClick={() => showRenameToast(s.id)}>Rename</button>
           </div>
         ))}
       </div>
@@ -1386,7 +1421,11 @@ export default function App() {
         </div>
       )}
 
-      <div className="woolPanel">
+      <div
+        className="woolPanel"
+        style={{ transform: `translate(-50%, ${panelY}px)` }}
+      >
+        <div className="panelHandle" onMouseDown={startDragPanel}></div>
         <h3>Wool Stock</h3>
         <p>Normal: {woolInventory.normal}</p>
         <p>Golden: {woolInventory.golden}</p>
