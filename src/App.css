@@ -152,7 +152,7 @@ body.sunset::before {
 .market {
   position: fixed;
   right: 20px;
-  top: 250px;
+  top: 230px;
 
   width: 220px;
   padding: 14px;
@@ -359,6 +359,7 @@ color: black;
 
 .invis {
   opacity: 0;
+  pointer-events: none;
 }
 
 .vis {
@@ -606,4 +607,32 @@ color: black;
 
 .sidebarHungerFill {
   height: 100%;
+}
+
+.timeRipple {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: rippleExpand 0.9s ease-out forwards;
+  background: radial-gradient(circle, rgba(0,255,255,0.5) 0%, rgba(0,255,255,0.15) 30%, transparent 70%);
+  z-index: 9999;
+}
+
+@keyframes rippleExpand {
+  0% {
+    width: 10px;
+    height: 10px;
+    opacity: 0.8;
+  }
+
+  100% {
+    width: 200vw;
+    height: 200vw;
+    opacity: 0;
+  }
 }
