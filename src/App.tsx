@@ -1,1490 +1,638 @@
-import "./App.css";
-import { useState, useEffect, Fragment, useRef } from "react";
-import sheep from "./Images/sheep.png";
-import moses from "./Images/moses.png";
-import baldNormal from "./Images/bald.png";
-import goldenSheep from "./Images/goldenSheep.png";
-import ghostSheep from "./Images/ghostSheep.png";
-import baldGolden from "./Images/goldBald.png";
-import baldGhost from "./Images/ghostBald.png";
-import denisSheep from "./Images/denisSheep.png";
-import baldDenis from "./Images/baldDenis.png";
-import crownSheep from "./Images/crownSheep.png";
-import baldCrown from "./Images/crownbald.png";
-import coyote from "./Images/VespaCoyote.png";
-import oncemore from "./Images/oncemore.png";
-import rainbpw from "./Images/Rainbowcina.png";
 
-let shopIsOpen = false;
 
-type AchievementId = "firstSheep" | "shepherd" | "pissyellow" | "overflow";
-
-type GameState = {
-  sheepCount: number;
-  money: number;
-  woolSold: number;
-  sheepTypes: SheepType[];
-};
-
-type Achievement = {
-  id: AchievementId;
-  name: string;
-  description: string;
-  check: (state: GameState) => boolean;
-  reward?: (game: RewardContext) => void;
-};
-
-type RewardContext = {
-  addMoney: (amount: number) => void;
-  addCarrots: (amount: number) => void;
-  addTrees: (amount: number) => void;
-};
-
-const achievementsList: Achievement[] = [
-  {
-    id: "firstSheep",
-    name: "A New Beginning",
-    description: "Own more than one sheep",
-    check: (s) => s.sheepCount > 1,
-    reward: (g) => g.addMoney(50),
-  },
-  {
-    id: "shepherd",
-    name: "Sheep Army",
-    description: "Own 10 sheep",
-    check: (s) => s.sheepCount >= 10,
-    reward: (g) => g.addMoney(50),
-  },
-  {
-    id: "pissyellow",
-    name: "Shiny!",
-    description: "Discover a golden sheep",
-    check: (s) => s.sheepTypes.includes("golden"),
-    reward: (g) => g.addMoney(50),
-  },
-  {
-    id: "overflow",
-    name: "What is Cost",
-    description: "Reach $1000",
-    check: (s) => s.money >= 1000,
-    reward: (g) => g.addMoney(50),
-  },
-];
-
-const sheepCatalogueText: Record<SheepType, string[]> = {
-  normal: [
-    "Just a regular sheep.",
-    "Nothing special. Probably.",
-    "Certified fluffy.",
-    "Average sheep moment.",
-    "Did you think it would transform?",
-  ],
-
-  golden: [
-    "12 carrot.",
-    "worth more than you",
-    "Shiny creature.",
-    "The economy loves this one.",
-  ],
-
-  ghost: [
-    "worth the wait",
-    "why is it translucent",
-    "is this thing alive?",
-    "you can shear a ghost???",
-  ],
-
-  denis: ["edgy", "kind capo", "brooding creature", "might heal others"],
-
-  crown: [
-    "She-ep used to rule this world",
-    "it's araya sheep",
-    "thanks skitty_gnocchi for helping test the game!",
-    "those who bow",
-  ],
-};
-
-const sheepConfig = {
-  normal: {
-    image: sheep,
-    baldImage: baldNormal,
-    woolValue: 40,
-    hungerDrain: 1,
-    carrotValue: 15,
-    treeValue: 35,
-    spawnChance: 0.8,
-  },
-  crown: {
-    image: crownSheep,
-    baldImage: baldCrown,
-    woolValue: 65,
-    hungerDrain: 0.8,
-    carrotValue: 17,
-    treeValue: 38,
-    spawnChance: 0.05,
-  },
-  golden: {
-    image: goldenSheep,
-    baldImage: baldGolden,
-    woolValue: 120,
-    hungerDrain: 1,
-    carrotValue: 15,
-    treeValue: 35,
-    spawnChance: 0.02,
-  },
-  ghost: {
-    image: ghostSheep,
-    baldImage: baldGhost,
-    woolValue: 15,
-    hungerDrain: 0,
-    carrotValue: 25,
-    treeValue: 15,
-    spawnChance: 0.06,
-  },
-  denis: {
-    image: denisSheep,
-    baldImage: baldDenis,
-    woolValue: 50,
-    hungerDrain: 1.25,
-    carrotValue: 25,
-    treeValue: 17,
-    spawnChance: 0.07,
-    passive: {
-      type: "groupHeal",
-      minInterval: 20000,
-      maxInterval: 30000,
-      minHeal: 8,
-      maxHeal: 12,
-    },
-  },
-};
-
-type SheepType = keyof typeof sheepConfig;
-
-const sheepLines = {
-  normal: [
-    "baa",
-    "munching",
-    "soft bleat",
-    "hello farmer",
-    "chewing",
-    "fluffy",
-    "i want a chair",
-  ],
-  hungry: [
-    "need food",
-    "so empty",
-    "stomach hurts",
-    "please feed",
-    "man this person sucks",
-    "baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAAAAAAAA",
-  ],
-  full: ["full.", "happy.", "content.", "round.", "thank you farmer"],
-  bald: ["cold.", "where wool?", "breezy…"],
-  funny: [
-    "taxes?",
-    "existence is hay.",
-    "baa means baa.",
-    "i still see your shadows in my wool",
-    "I've had ENOUGH of this!!!",
-  ],
-  ominous: [
-    "did moses just blink?",
-    "our food is limited, farmer",
-    "counting...",
-    "arghhhhh im sheeping it so goooood",
-    "feed me THIS INSTANT",
-    "make me a sandwich",
-  ],
-};
-
-const randomFrom = (arr: string | any[]) =>
-  arr[Math.floor(Math.random() * arr.length)];
-
-interface Sheep {
-  id: number;
-  type: SheepType;
-  hunger: number;
-  image: string;
-  isBald: boolean;
-  speech: string;
-  name: string;
-  regrowAt?: number | null;
-  nextPassiveAt?: number | null;
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
 }
 
-const maxRep = 1.2;
-
-export default function App() {
-  const isGameOver = useRef(false);
-
-  const rollSheepType = (): SheepType => {
-    const r = Math.random();
-    let cumulative = 0;
-
-    for (const type in sheepConfig) {
-      cumulative += sheepConfig[type as SheepType].spawnChance;
-      if (r < cumulative) {
-        return type as SheepType;
-      }
-    }
-
-    return "normal";
-  };
-
-  const createSheep = (): Sheep => {
-    const sheepType = rollSheepType();
-    const config = sheepConfig[sheepType];
-
-    return {
-      id: Date.now() + Math.random(),
-      type: sheepType,
-      hunger: 100,
-      image: config.image,
-      isBald: false,
-      speech: "",
-      name: "Unnamed Sheep",
-    };
-  };
-
-  useEffect(() => {
-    const repInterval = setInterval(() => {
-      setSheeps((prev) => {
-        const healthySheep = prev.filter((s) => s.hunger > 80).length;
-
-        if (healthySheep >= prev.length && prev.length > 2) {
-          setRep((r) => Math.min(maxRep, r + 0.02));
-        }
-
-        return prev;
-      });
-    }, 8000);
-
-    return () => clearInterval(repInterval);
-  }, []);
-
-  useEffect(() => {
-    const regrowInterval = setInterval(() => {
-      setSheeps((prev) =>
-        prev.map((s) => {
-          if (s.isBald && s.regrowAt && Date.now() > s.regrowAt) {
-            return {
-              ...s,
-              isBald: false,
-              regrowAt: null,
-              image: sheepConfig[s.type].image,
-            };
-          }
-          return s;
-        }),
-      );
-    }, 1000);
-    return () => clearInterval(regrowInterval);
-  }, []);
-
-  type Coyote = {
-    id: number;
-    x: number;
-    y: number;
-    targetSheepId: number;
-  };
-
-  const [sheeps, setSheeps] = useState<Sheep[]>([createSheep()]);
-
-  const [coyotes, setCoyotes] = useState<Coyote[]>([]);
-  const [carrotCount, setCarrotCount] = useState(10);
-  const [carrotOpen, setCarrotOpen] = useState(false);
-  const [treeOpen, setTreeOpen] = useState(false);
-  const [money, setMoney] = useState(125);
-  const [shop, setShop] = useState("invis");
-  const [treevis, setTreevis] = useState("locked");
-  const [treeCount, setTreeCount] = useState(0);
-  const [dialogueCount, setDialogueCount] = useState(0);
-  const [dialougeText, setDialogueText] = useState("im moses");
-  const [mosesHere, setMosesHere] = useState("visible");
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [SaveGameUse, setSaveGameUse] = useState("Save Game");
-  const [shearsEquipped, setShearsEquipped] = useState(false);
-  const [currentEvent, setCurrentEvent] = useState<
-    null | "famine" | "coyotes" | "oncemore"
-  >(null);
-  const [catalogueFlavor, setCatalogueFlavor] = useState<
-    Record<SheepType, string>
-  >({
-    normal: "",
-    golden: "",
-    ghost: "",
-    denis: "",
-    crown: "",
-  });
-  const [marketOpen, setMarketOpen] = useState(false);
-  const [achievements, setAchievements] = useState<Record<string, boolean>>({});
-  const [woolSold, setWoolSold] = useState(0);
-  const [eventTimeLeft, setEventTimeLeft] = useState(0);
-  const [timeOfDay, setTimeOfDay] = useState(0);
-  const [oncemoreIcons, setOncemoreIcons] = useState<
-    { id: number; x: number; y: number }[]
-  >([]);
-
-  const [oncemoreClicks, setOncemoreClicks] = useState(0);
-  const [woolInventory, setWoolInventory] = useState({
-    normal: 0,
-    golden: 0,
-    ghost: 0,
-    denis: 0,
-    crown: 0,
-  });
-
-  const [woolMarket, setWoolMarket] = useState({
-    normal: sheepConfig.normal.woolValue,
-    golden: sheepConfig.golden.woolValue,
-    ghost: sheepConfig.ghost.woolValue,
-    denis: sheepConfig.denis.woolValue,
-    crown: sheepConfig.crown.woolValue,
-  });
-  const [rep, setRep] = useState(1);
-  const [discoveredSheep, setDiscoveredSheep] = useState<
-    Record<SheepType, boolean>
-  >({
-    normal: false,
-    golden: false,
-    ghost: false,
-    denis: false,
-    crown: false,
-  });
-  const [page, setPage] = useState<"game" | "catalogue" | "achievements">(
-    "game",
-  );
-  type Toast = {
-    id: number;
-    title: string;
-    text: string;
-    moretext?: string;
-    input?: boolean;
-    onSubmit?: (value: string) => void;
-  };
-
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const [toastInput, setToastInput] = useState("");
-  const [panelY, setPanelY] = useState(0);
-  const draggingPanel = useRef(false);
-  const dragStartY = useRef(0);
-
-  const panelMin = 20;
-  const panelMax = 215;
-
-  useEffect(() => {
-    window.addEventListener("mousemove", dragPanel);
-    window.addEventListener("mouseup", stopDragPanel);
-
-    return () => {
-      window.removeEventListener("mousemove", dragPanel);
-      window.removeEventListener("mouseup", stopDragPanel);
-    };
-  }, []);
-
-  const startDragPanel = (e: { clientY: number }) => {
-    draggingPanel.current = true;
-    dragStartY.current = e.clientY - panelY;
-  };
-
-  const dragPanel = (e: { clientY: number }) => {
-    if (!draggingPanel.current) return;
-
-    let newY = e.clientY - dragStartY.current;
-
-    newY = Math.max(panelMin, Math.min(panelMax, newY));
-
-    setPanelY(newY);
-  };
-
-  const stopDragPanel = () => {
-    draggingPanel.current = false;
-  };
-
-  const showToast = (title: string, text: string, moretext: string) => {
-    const id = Date.now() + Math.random();
-
-    setToasts((prev) => [...prev, { id, title, text, moretext }]);
-
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3500);
-  };
-
-  useEffect(() => {
-    const state: GameState = {
-      sheepCount: sheeps.length,
-      money,
-      woolSold,
-      sheepTypes: sheeps.map((s) => s.type),
-    };
-
-    checkAchievements(state);
-  }, [sheeps, money, woolSold]);
-  const checkAchievements = (state: GameState) => {
-    setAchievements((prev) => {
-      const updated = { ...prev };
-
-      achievementsList.forEach((a) => {
-        if (!updated[a.id] && a.check(state)) {
-          updated[a.id] = true;
-
-          showToast("Oooooh! New achievement:", a.name, a.description);
-
-          if (a.reward) {
-            a.reward({
-              addMoney: (amount) => setMoney((m) => m + amount),
-              addCarrots: (amount) => setCarrotCount((c) => c + amount),
-              addTrees: (amount) => setTreeCount((t) => t + amount),
-            });
-          }
-        }
-      });
-
-      return updated;
-    });
-  };
-  useEffect(() => {
-    sheeps.forEach((s) => {
-      setDiscoveredSheep((prev) => {
-        if (!prev[s.type]) {
-          setRep((r) => Math.min(maxRep, r + 0.02));
-        }
-
-        return {
-          ...prev,
-          [s.type]: true,
-        };
-      });
-    });
-  }, [sheeps]);
-
-  const generateMarketPrices = () => {
-    setWoolMarket({
-      normal: Math.floor(
-        sheepConfig.normal.woolValue * ((0.7 + Math.random() * 0.6) * rep),
-      ),
-      golden: Math.floor(
-        sheepConfig.golden.woolValue * ((0.7 + Math.random() * 0.65) * rep),
-      ),
-      ghost: Math.floor(
-        sheepConfig.ghost.woolValue * ((0.7 + Math.random() * 0.6) * rep),
-      ),
-      denis: Math.floor(
-        sheepConfig.denis.woolValue * ((0.7 + Math.random() * 0.6) * rep),
-      ),
-      crown: Math.floor(
-        sheepConfig.crown.woolValue * ((0.7 + Math.random() * 0.6) * rep),
-      ),
-    });
-  };
-
-  useEffect(() => {
-    const marketInterval = setInterval(() => {
-      generateMarketPrices();
-    }, 7000);
-
-    return () => clearInterval(marketInterval);
-  }, []);
-
-  type TimePhase = "sunrise" | "day" | "sunset" | "night";
-
-  const getTimePhase = (time: number): TimePhase => {
-    if (time < 40) return "sunrise";
-    if (time < 120) return "day";
-    if (time < 160) return "sunset";
-    return "night";
-  };
-
-  const timePhase = getTimePhase(timeOfDay);
-
-  useEffect(() => {
-    if (!isLoaded || page !== "game") return;
-
-    const dayInterval = setInterval(() => {
-      setTimeOfDay((prev) => (prev + 1) % 240);
-    }, 550);
-
-    return () => clearInterval(dayInterval);
-  }, [isLoaded, page]);
-
-  useEffect(() => {
-    if (page !== "game") return;
-    const interval = setInterval(
-      () => {
-        setSheeps((prevSheep) => {
-          const denisSheep = prevSheep.filter(
-            (s) => s.type === "denis" && !s.isBald,
-          );
-
-          if (denisSheep.length === 0) return prevSheep;
-
-          return prevSheep.map((s) => {
-            const config = sheepConfig["denis"];
-            const passive = config.passive;
-            if (!passive) return s;
-
-            const healAmount =
-              Math.floor(
-                Math.random() * (passive.maxHeal - passive.minHeal + 1),
-              ) + passive.minHeal;
-
-            return {
-              ...s,
-              hunger: Math.min(100, s.hunger + healAmount),
-            };
-          });
-        });
-      },
-      Math.random() * 10000 + 20000,
-    );
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    document.body.classList.remove("sunrise", "day", "sunset", "night");
-    document.body.classList.add(timePhase);
-  }, [timePhase]);
-
-  const saveGame = () => {
-    const saveData = {
-      sheeps,
-      carrotCount,
-      treeCount,
-      money,
-      treevis,
-      dialogueCount,
-      dialougeText,
-      mosesHere,
-      currentEvent,
-      eventTimeLeft,
-      woolInventory,
-      rep,
-      discoveredSheep,
-      achievements,
-    };
-    localStorage.setItem("ezrasheepsave", JSON.stringify(saveData));
-  };
-
-  useEffect(() => {
-    if (!isLoaded || isGameOver.current) return;
-    saveGame();
-  }, [
-    sheeps,
-    carrotCount,
-    treeCount,
-    money,
-    treevis,
-    dialogueCount,
-    dialougeText,
-    mosesHere,
-    currentEvent,
-    eventTimeLeft,
-    shearsEquipped,
-    woolInventory,
-    rep,
-    achievements,
-  ]);
-
-  useEffect(() => {
-    const savedGame = localStorage.getItem("ezrasheepsave");
-    if (savedGame) {
-      const data = JSON.parse(savedGame);
-      const now = Date.now();
-
-      setSheeps(
-        data.sheeps?.map((s: any) => {
-          const type: SheepType = s.type ?? "normal";
-
-          const isStillBald = s.regrowAt ? now < s.regrowAt : false;
-
-          return {
-            ...s,
-            type,
-            name: s.name ?? "Unnamed Sheep",
-            isBald: isStillBald,
-            regrowAt: isStillBald ? s.regrowAt : null,
-            speech: "",
-            image: isStillBald
-              ? sheepConfig[type].baldImage
-              : sheepConfig[type].image,
-          };
-        }) ?? [createSheep()],
-      );
-      setDiscoveredSheep(
-        data.discoveredSheep ?? {
-          normal: false,
-          golden: false,
-          ghost: false,
-          denis: false,
-        },
-      );
-      setAchievements(data.achievements ?? {});
-      setRep(data.rep ?? 1);
-      setCarrotCount(data.carrotCount ?? 10);
-      setTreeCount(data.treeCount ?? 0);
-      setMoney(data.money ?? 100);
-      setTreevis(data.treevis ?? "locked");
-      setDialogueCount(data.dialogueCount ?? 0);
-      setDialogueText(data.dialougeText ?? "im moses");
-      setMosesHere(data.mosesHere ?? "visible");
-      setCurrentEvent(data.currentEvent ?? null);
-      setEventTimeLeft(data.eventTimeLeft ?? 0);
-      setWoolInventory(
-        data.woolInventory ?? {
-          normal: 0,
-          golden: 0,
-          ghost: 0,
-          denis: 0,
-          crown: 0,
-        },
-      );
-    }
-    setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded || page !== "game") return;
-
-    const interval = setInterval(() => {
-      setSheeps((prevSheeps) => {
-        const afterHunger = prevSheeps.map((s) => {
-          const config = sheepConfig[s.type];
-
-          if (config.hungerDrain === 0) return s;
-
-          let hungerLoss = config.hungerDrain;
-
-          if (currentEvent === "famine") hungerLoss += 1.5;
-          if (timePhase === "night" && s.isBald) hungerLoss += 1;
-
-          return { ...s, hunger: Math.max(0, s.hunger - hungerLoss) };
-        });
-        const afterCoyotes =
-          currentEvent === "coyotes"
-            ? afterHunger.filter((s) => {
-                if (s.hunger < 65) {
-                  const wolfChance = 0.27;
-                  if (Math.random() < wolfChance) {
-                    return false;
-                  }
-                }
-                return true;
-              })
-            : afterHunger;
-
-        const deadSheep = afterCoyotes.filter((s) => s.hunger <= 0);
-        const aliveSheep = afterCoyotes.filter((s) => s.hunger > 0);
-
-        if (deadSheep.length > 0) {
-          const penaltyPerSheep = 175;
-          setMoney((prev) =>
-            Math.max(0, prev - deadSheep.length * penaltyPerSheep),
-          );
-          setRep((prev) => Math.max(0, prev - deadSheep.length * 0.2));
-        }
-
-        if (aliveSheep.length === 0) {
-          isGameOver.current = true;
-          clearInterval(interval);
-          alert(
-            "why you letting your sheeps starve? if you wanna, let's try again",
-          );
-          localStorage.removeItem("ezrasheepsave");
-          window.location.reload();
-          return prevSheeps;
-        }
-
-        return aliveSheep;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isLoaded, currentEvent, timePhase, page]);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    if (rep <= 0) {
-      isGameOver.current = true;
-
-      alert(
-        "you shouldntve killed all those sheep man, nobody's buying anymore",
-      );
-
-      localStorage.removeItem("ezrasheepsave");
-      window.location.reload();
-    }
-  }, [rep, isLoaded, page]);
-
-  useEffect(() => {
-    if (currentEvent === "coyotes") {
-      const newCoyotes = Array.from({ length: 4 }, () => {
-        const target = randomFrom(sheeps);
-
-        return {
-          id: Date.now() + Math.random(),
-          x: Math.random() * window.innerWidth,
-          y: 50,
-          targetSheepId: target.id,
-        };
-      });
-
-      setCoyotes(newCoyotes);
-    } else {
-      setCoyotes([]);
-    }
-  }, [currentEvent]);
-  useEffect(() => {
-    if (currentEvent !== "coyotes") return;
-
-    const interval = setInterval(() => {
-      setCoyotes((prev) =>
-        prev.map((c) => {
-          const target = sheeps.find((s) => s.id === c.targetSheepId);
-          if (!target) return c;
-
-          const dx = Math.random() * 4 - 2;
-          const dy = Math.random() * 4;
-
-          return {
-            ...c,
-            x: c.x + dx,
-            y: c.y + dy,
-          };
-        }),
-      );
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [currentEvent, sheeps]);
-  useEffect(() => {
-    if (currentEvent !== "coyotes") return;
-
-    const stealInterval = setInterval(() => {
-      if (coyotes.length === 0) return;
-
-      setSheeps((prev) => {
-        if (prev.length === 0) return prev;
-
-        const index = Math.floor(Math.random() * prev.length);
-        const newSheep = [...prev];
-        newSheep.splice(index, 1);
-
-        return newSheep;
-      });
-    }, 5500);
-
-    return () => clearInterval(stealInterval);
-  }, [currentEvent, coyotes]);
-  useEffect(() => {
-    if (!isLoaded || page !== "game") return;
-
-    const eventRoll = setInterval(() => {
-      setCurrentEvent((prev) => {
-        if (prev !== null) return prev;
-
-        const roll = Math.random();
-
-        if (roll < 0.005) {
-          setEventTimeLeft(40);
-          document.body.classList.add("famine");
-          return "famine";
-        }
-        if (roll < 0.01) {
-          setEventTimeLeft(999);
-          document.body.classList.add("oncemore");
-          return "oncemore";
-        }
-
-        if (roll < 0.018) {
-          setEventTimeLeft(25);
-          document.body.classList.add("coyotes");
-          return "coyotes";
-        }
-
-        return prev;
-      });
-    }, 5500);
-
-    return () => clearInterval(eventRoll);
-  }, [isLoaded, page]);
-
-  useEffect(() => {
-    if (!currentEvent) return;
-
-    const timer = setInterval(() => {
-      setEventTimeLeft((prev) => {
-        if (prev <= 1) {
-          setCurrentEvent(null);
-          if (currentEvent === "famine" && eventTimeLeft <= 1) {
-            setRep((r) => Math.min(maxRep, r + 0.03));
-          }
-          document.body.classList.remove("famine");
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [currentEvent]);
-
-  const carrotClick = () => {
-    if (carrotCount > 0) {
-      setCarrotOpen(!carrotOpen);
-      setTreeOpen(false);
-      setShearsEquipped(false);
-    }
-  };
-
-  const treeClick = () => {
-    if (treeCount > 0) {
-      setTreeOpen(!treeOpen);
-      setCarrotOpen(false);
-      setShearsEquipped(false);
-    }
-  };
-
-  const scareCoyote = (id: number) => {
-    setCoyotes((prev) => prev.filter((c) => c.id !== id));
-  };
-
-  useEffect(() => {
-    if (currentEvent === "oncemore") {
-      const icons = Array.from({ length: 10 }, () => ({
-        id: Date.now() + Math.random(),
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * 400 + 100,
-      }));
-
-      setOncemoreIcons(icons);
-      setOncemoreClicks(0);
-    } else {
-      setOncemoreIcons([]);
-    }
-  }, [currentEvent]);
-  useEffect(() => {
-    if (currentEvent !== "oncemore") return;
-
-    const stealInterval = setInterval(() => {
-      setMoney((prev) => Math.max(0, prev - Math.ceil(Math.random() * 2)));
-    }, 800);
-
-    return () => clearInterval(stealInterval);
-  }, [currentEvent]);
-
-  const clickOncemoreIcon = (id: number) => {
-    setOncemoreIcons((prev) => prev.filter((icon) => icon.id !== id));
-
-    setOncemoreClicks((prev) => {
-      const newCount = prev + 1;
-
-      if (newCount >= 10) {
-        setCurrentEvent(null);
-        document.body.classList.remove("oncemore");
-      }
-
-      return newCount;
-    });
-  };
-
-  const interactWithSheep = (id: number) => {
-    setSheeps((prevSheeps) =>
-      prevSheeps.map((s) => {
-        if (s.id !== id) return s;
-
-        if (shearsEquipped && !s.isBald) {
-          setWoolInventory((prev) => ({
-            ...prev,
-            [s.type]: prev[s.type] + 1,
-          }));
-
-          const regrowSpeed = timePhase === "night" ? 23000 : 30000;
-
-          return {
-            ...s,
-            image: sheepConfig[s.type].baldImage,
-            isBald: true,
-            regrowAt: Date.now() + regrowSpeed,
-          };
-        }
-
-        if (carrotOpen && carrotCount > 0) {
-          setCarrotCount((prev) => prev - 1);
-          setCarrotOpen(false);
-          console.log("mmmmmmmmm yummy");
-
-          const config = sheepConfig[s.type];
-          const carrotValue =
-            currentEvent === "famine"
-              ? Math.floor(config.carrotValue * 0.75)
-              : config.carrotValue;
-          return { ...s, hunger: Math.min(s.hunger + carrotValue, 100) };
-        }
-
-        if (treeOpen && treeCount > 0) {
-          setTreeCount((prev) => prev - 1);
-          setTreeOpen(false);
-
-          const config = sheepConfig[s.type];
-          const treeValue =
-            currentEvent === "famine"
-              ? Math.floor(config.treeValue * 0.75)
-              : config.treeValue;
-          return { ...s, hunger: Math.min(s.hunger + treeValue, 100) };
-        }
-
-        const line = getSheepLine(s);
-
-        setTimeout(() => {
-          setSheeps((curr) =>
-            curr.map((sh) => (sh.id === id ? { ...sh, speech: "" } : sh)),
-          );
-        }, 2000);
-
-        return { ...s, speech: line };
-      }),
-    );
-  };
-
-  const getSheepLine = (s: {
-    id?: number;
-    hunger: any;
-    image?: string;
-    isBald: any;
-    speech?: string;
-  }) => {
-    if (timePhase === "night") {
-      return randomFrom([
-        "i cannot sleep",
-        "farmer are you awake",
-        "sheep leap over the fence",
-        "counting stars...",
-      ]);
-    }
-    if (currentEvent === "famine") {
-      return randomFrom([
-        "i hunger",
-        "it is a hopeless clash",
-        "farmer where is the food",
-        "ts!",
-      ]);
-    }
-    const roll = Math.random();
-
-    if (s.hunger < 40) return randomFrom(sheepLines.hungry);
-    if (s.hunger > 90) return randomFrom(sheepLines.full);
-    if (s.isBald) return randomFrom(sheepLines.bald);
-
-    if (roll < 0.02) return randomFrom(sheepLines.ominous);
-    if (roll < 0.08) return randomFrom(sheepLines.funny);
-
-    return randomFrom(sheepLines.normal);
-  };
-
-  const buyCarrots = () => {
-    if (money >= 20 / rep && shopIsOpen) {
-      setCarrotCount((prev) => prev + 15);
-      setMoney((prev) => prev - Math.floor(20 / rep));
-    }
-  };
-
-  const buyTreeLeaves = () => {
-    if (money >= 35 / rep && shopIsOpen) {
-      setMoney((prev) => prev - Math.floor(35 / rep));
-      setTreevis("treebutton");
-      setTreeCount((prev) => prev + 10);
-    }
-  };
-
-  const buySheep = () => {
-    if (money >= 500 && shopIsOpen) {
-      setMoney((prev) => prev - 500);
-      const newSheep = createSheep();
-      setSheeps((prevSheeps) => [...prevSheeps, newSheep]);
-    }
-  };
-
-  const openShop = () => {
-    if (timePhase === "night") {
-      shopIsOpen = false;
-      setShop("invis");
-    } else if (shopIsOpen) {
-      shopIsOpen = false;
-      setShop("invis");
-    } else {
-      shopIsOpen = true;
-      setShop("vis");
-    }
-  };
-
-  useEffect(() => {
-    if (timePhase === "night" && shopIsOpen) {
-      shopIsOpen = false;
-      setShop("invis");
-    }
-  }, [timePhase]);
-
-  const shiftDialogue = () => {
-    setDialogueCount((prev) => prev + 1);
-    const lines = [
-      "im moses",
-      "youre the new farmer, right?",
-      "good. ill teach you the basics",
-      "click carrot stack, then click a sheep.",
-      "done? perfect",
-      "check the shop. heres some cash.",
-      "and when you get enough cash, you can buy sheep",
-      "sometimes, something out of your control will happen.",
-      "Just prepare for the worst",
-      "watch for different-looking sheep.",
-      "...",
-      "I'll stick around, incase something happens",
-    ];
-    if (dialogueCount === 4) setMoney((prev) => prev + 150);
-    if (dialogueCount >= 11) setMosesHere("invisible");
-    setDialogueText(lines[dialogueCount + 1] || "");
-  };
-
-  const addLineBreaks = (str: string) => {
-    const lines = str.split("\n");
-    return lines.map((subStr: string, index: number) => (
-      <Fragment key={index}>
-        {subStr}
-        {index < lines.length - 1 && <br />}
-      </Fragment>
-    ));
-  };
-
-  const sellWool = (type: SheepType) => {
-    if (woolInventory[type] <= 0) return;
-    setWoolSold((prev) => prev + 1);
-    setWoolInventory((prev) => ({
-      ...prev,
-      [type]: prev[type] - 1,
-    }));
-
-    setMoney((prev) => prev + woolMarket[type]);
-    if (type === "golden") setRep((r) => Math.min(maxRep, r + 0.01));
-    if (type === "crown") setRep((r) => Math.min(maxRep, r + 0.015));
-  };
-
-  const showRenameToast = (sheepId: number) => {
-    const id = Date.now();
-
-    setToasts((prev) => [
-      ...prev,
-      {
-        id,
-        title: "Name Sheep",
-        text: "Enter a name:",
-        input: true,
-        onSubmit: (value: string) => {
-          setSheeps((prevSheeps) =>
-            prevSheeps.map((s) =>
-              s.id === sheepId ? { ...s, name: value.slice(0, 20) } : s,
-            ),
-          );
-
-          setToasts((prev) => prev.filter((t) => t.id !== id));
-        },
-      },
-    ]);
-  };
-
-  const feedSheep = (id: number, food: "carrot" | "tree") => {
-    setSheeps((prevSheeps) =>
-      prevSheeps.map((s) => {
-        if (s.id !== id) return s;
-
-        const config = sheepConfig[s.type];
-
-        if (food === "carrot" && carrotCount > 0) {
-          setCarrotCount((c) => c - 1);
-
-          const carrotValue =
-            currentEvent === "famine"
-              ? Math.floor(config.carrotValue * 0.75)
-              : config.carrotValue;
-
-          return { ...s, hunger: Math.min(100, s.hunger + carrotValue) };
-        }
-
-        if (food === "tree" && treeCount > 0) {
-          setTreeCount((t) => t - 1);
-
-          const treeValue =
-            currentEvent === "famine"
-              ? Math.floor(config.treeValue * 0.75)
-              : config.treeValue;
-
-          return { ...s, hunger: Math.min(100, s.hunger + treeValue) };
-        }
-
-        return s;
-      }),
-    );
-  };
-  useEffect(() => {
-    if (page === "catalogue") {
-      const newFlavor: Record<SheepType, string> = {
-        normal: randomFrom(sheepCatalogueText.normal),
-        golden: randomFrom(sheepCatalogueText.golden),
-        ghost: randomFrom(sheepCatalogueText.ghost),
-        denis: randomFrom(sheepCatalogueText.denis),
-        crown: randomFrom(sheepCatalogueText.crown),
-      };
-
-      setCatalogueFlavor(newFlavor);
-    }
-  }, [page]);
-  if (page === "achievements") {
-    return (
-      <div className="achievementsPage">
-        <h1 className="power">Achievements</h1>
-
-        {achievementsList.map((a) => {
-          const unlocked = achievements[a.id];
-
-          return (
-            <div
-              key={a.id}
-              className={`achievementEntry ${unlocked ? "unlocked" : "locked"}`}
-            >
-              <h3>{unlocked ? a.name : "???"}</h3>
-              <p>{unlocked ? a.description : "Locked Achievement"}</p>
-            </div>
-          );
-        })}
-
-        <button onClick={() => setPage("game")}>Back</button>
-      </div>
-    );
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
   }
-  if (page === "catalogue") {
-    return (
-      <div className="catalogue">
-        <h1 className="power">Sheep Catalogue</h1>
+  to {
+    transform: rotate(360deg);
+  }
+}
 
-        {Object.keys(sheepConfig).map((type) => {
-          const t = type as SheepType;
-          const discovered = discoveredSheep[t];
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
 
-          return (
-            <div key={t} className="catalogueEntry">
-              {discovered ? (
-                <>
-                  <img src={sheepConfig[t].image} width={120} />
-                  <p>{t} sheep</p>
-                  <p>{catalogueFlavor[t]}</p>
-                </>
-              ) : (
-                <>
-                  <div className="unknownSheep">???</div>
-                  <p>Unknown Sheep</p>
-                </>
-              )}
-            </div>
-          );
-        })}
+.card {
+  padding: 2em;
+}
 
-        <button onClick={() => setPage("game")}>Back</button>
-      </div>
-    );
+.read-the-docs {
+  color: #888;
+}
+
+
+
+.catalogue {
+  text-align: center;
+ 
+}
+
+.catalogueEntry {
+  border: 2px solid black;
+  border-radius: 3px;
+  margin: 10px;
+  padding: 10px;
+  display: inline-block;
+}
+
+.unknownSheep {
+  width:120px;
+  height:120px;
+  background:black;
+}
+body {
+  background-image: url('https://images.pexels.com/photos/1198507/pexels-photo-1198507.jpeg');
+  background-repeat: repeat; 
+  background-size: cover; 
+  background-position: center; 
+  background-color: brown; 
+  min-height: 100vh;
+  min-width: 100vw;
+  transition: filter 8s;
+  z-index: -2;
+}
+
+body.famine {
+  filter: brightness(0.8) saturate(0.5);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  transition: background 6.5s ease;
+  z-index: 99999;
+}
+
+body.day::before {
+  background: transparent;
+  
+}
+
+body.night::before {
+  background: rgba(0, 0, 0, 0.87);
+  
+}
+
+body.sunset::before {
+  background: rgba(221, 158, 0, 0.32);
+ 
+}
+
+@keyframes oncemorePulse {
+  0% {
+    transform: scale(1);
   }
 
-  return (
-    <div className={`gameRoot ${currentEvent === "famine" ? "famine" : ""}`}>
-      <div className="sheepSidebar">
-        <h3>The Farm ({sheeps.length})</h3>
+  50% {
+    transform: scale(1.25);
+  }
 
-        {sheeps.map((s) => (
-          <div key={s.id} className="sheepListEntry">
-            <span className="sheepListName">{s.name}</span>
-            <span className="sheepListType">({s.type})</span>
+  100% {
+    transform: scale(1);
+  }
+}
 
-            <div className="sidebarHungerBar">
-              <div
-                className="sidebarHungerFill"
-                style={{
-                  width: `${s.hunger}%`,
-                  background:
-                    s.hunger > 60
-                      ? "limegreen"
-                      : s.hunger > 30
-                        ? "gold"
-                        : "red",
-                }}
-              />
-            </div>
+.oncemoreIcon {
+  animation: oncemorePulse 0.6s infinite ease-in-out;
+}
 
-            <div className="sidebarButtons">
-              <p>Feed</p>
-              <button
-                disabled={carrotCount <= 0}
-                onClick={() => feedSheep(s.id, "carrot")}
-              >
-                Carrot
-              </button>
+.woolPanel {
+  position: fixed;
+  left: 130px;
+  bottom: 0;
+    transform: translateY(-50%);
+  transition: transform 0.05s linear;
 
-              <button
-                disabled={treeCount <= 0}
-                onClick={() => feedSheep(s.id, "tree")}
-              >
-                Bag
-              </button>
+  width: 200px;
+  padding: 14px;
 
-              <button onClick={() => showRenameToast(s.id)}>Rename</button>
-            </div>
-          </div>
-        ))}
-      </div>
-      <p className="power">Funds: ${money}</p>
-      {currentEvent === "famine" && (
-        <p className="eventWarning">
-          I would watch my food well, the farms have run dry ({eventTimeLeft}s)
-        </p>
-      )}
-      {currentEvent === "coyotes" && (
-        <p className="eventWarning">
-          There are spooky scary Vespas hunting weak sheep, scare 'em off with
-          your mouse ({eventTimeLeft}s)
-        </p>
-      )}
-      {currentEvent === "oncemore" && (
-        <p className="eventWarning">
-          Once More... i'd say you should get rid of them ({oncemoreClicks}/10)
-        </p>
-      )}
-      <div>
-        <button className="buttton" onClick={carrotClick}>
-          {carrotOpen ? "holding carrot" : `Carrot stack: ${carrotCount}`}
-        </button>
-        <br />
-        <button className={treevis} onClick={treeClick}>
-          {treeOpen ? "holding leaves" : `Tree Bags: ${treeCount}`}
-        </button>
-      </div>
+  background: #f7f2d0;
+  border: 4px solid #3b2f1a;
+  box-shadow: 4px 4px 0px black;
+  color: black;
 
-      <img className={`left ${mosesHere}`} src={moses} alt="moses" />
+  font-family: monospace;
+  z-index: 999;
+}
 
-      {coyotes.map((w) => (
-        <img
-          key={w.id}
-          src={coyote}
-          className="coyote"
-          style={{
-            position: "absolute",
-            left: `${w.x}px`,
-            top: `${w.y}px`,
-            width: "120px",
-            cursor: "pointer",
-          }}
-          onClick={() => scareCoyote(w.id)}
-        />
-      ))}
-      {oncemoreIcons.map((icon) => (
-        <img
-          key={icon.id}
-          src={oncemore}
-          className="oncemoreIcon"
-          style={{
-            position: "absolute",
-            left: `${icon.x}px`,
-            top: `${icon.y}px`,
-            width: "80px",
-            cursor: "pointer",
-          }}
-          onClick={() => clickOncemoreIcon(icon.id)}
-          alt="oncemore"
-        />
-      ))}
+.panelHandle {
+  width: 60px;
+  height: 6px;
+  background: #888;
+  border-radius: 4px;
+  margin: 8px auto 12px auto;
+  cursor: grab;
+}
 
-      <div
-        className="sheep-container"
-        style={{ display: "flex", flexWrap: "wrap", justifyContent: "center" }}
-      >
-        {sheeps.map((s) => (
-          <div key={s.id} className="sheepWrapper">
-            <p className="sheepName">{s.name}</p>
-            <br />
-            <div className="sheepImageContainer">
-              {s.speech && <p className="sheepSpeech">{s.speech}</p>}
+.market {
+  position: fixed;
+  right: 20px;
+  top: 230px;
 
-              <div className="hungerBar">
-                <div
-                  className="hungerFill"
-                  style={{
-                    width: `${s.hunger}%`,
-                    background:
-                      s.hunger > 60
-                        ? "limegreen"
-                        : s.hunger > 30
-                          ? "gold"
-                          : "red",
-                  }}
-                />
-              </div>
-            </div>
-            <img
-              onClick={() => interactWithSheep(s.id)}
-              onDoubleClick={() => showRenameToast(s.id)}
-              className="ezrasheep"
-              src={s.image}
-              alt="sheep"
-            />
-          </div>
-        ))}
-      </div>
+  width: 220px;
+  padding: 14px;
 
-      <div>
-        <button className="right" onClick={openShop}>
-          Shop
-        </button>
-        <br />
-        <br />
-        <br />
-        <button className={`shopping ${shop}`} onClick={buyCarrots}>
-          Buy 15 Carrots (${Math.ceil(20 / rep)})
-        </button>
-        <br />
-        <br />
-        <br />
-        <br />
-        <button className={`shopping ${shop}`} onClick={buyTreeLeaves}>
-          Buy 10 Tree Leaf Bundles (${Math.ceil(35 / rep)})
-        </button>
-        <br />
-        <br />
-        <br />
-        <br />
-        <button className={`shopping ${shop}`} onClick={buySheep}>
-          Buy a new sheep ($500)
-        </button>
-      </div>
+  background: #f4e6c3;
+  border: 4px solid #5c3d1e;
+  border-radius: 8px;
+color: black;
+  font-family: monospace;
+  text-align: left;
 
-      <button
-        className="shears shearsagain"
-        onClick={() => setShearsEquipped(!shearsEquipped)}
-      >
-        {shearsEquipped ? "SHEARING" : "Shears"}
-      </button>
+  box-shadow: 5px 5px 0px #00000055;
 
-      <div className={`dialouge ${mosesHere}`}>
-        <h4 className={`dialouge ${mosesHere}`}>Moses</h4>
-        <p onClick={shiftDialogue} className={`dialouge ${mosesHere}`}>
-          {addLineBreaks(dialougeText)}
-        </p>
-      </div>
-      <button
-        className="otherRight"
-        onClick={() => setMarketOpen((prev) => !prev)}
-      >
-        {marketOpen ? "Close Market" : "Wool Market"}
-      </button>
+  z-index: 1000;
+}
 
-      <br />
-      <br />
-      <br />
-      <button className="otherRightAgain" onClick={() => setPage("catalogue")}>
-        Catalogue
-      </button>
-      <br />
-      <br />
-      <br />
-      <button
-        className="otherRightAgainAgain"
-        onClick={() => setPage("achievements")}
-      >
-        Achievements
-      </button>
-      {marketOpen && (
-        <div className="market">
-          <h3>Wool Market</h3>
+.coyote {
+  position: absolute;
+  z-index: 0;
+  animation: coyoteFloat 3s infinite ease-in-out;
+}
 
-          <p>Normal Wool Price: ${woolMarket.normal}</p>
-          <button onClick={() => sellWool("normal")}>Sell Normal Wool</button>
+@keyframes coyoteFloat {
+  0% { transform: translateX(0px); }
+  50% { transform: translateX(15px); }
+  100% { transform: translateX(0px); }
+}
+.power {
+    font-size: 80px;
+    text-shadow: 0 0 20px #121247;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to right, #131324, #213d50, #2f882f, #6d2a4b, #121247);
+    background-size: 400% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: rainbow 4.5s ease-in-out infinite;
+}
 
-          <p>Golden Wool Price: ${woolMarket.golden}</p>
-          <button onClick={() => sellWool("golden")}>Sell Golden Wool</button>
+@keyframes rainbow {
+   
+    0%, 100% {
+        background-position: 0 0; 
+    }
+    50% {
+        background-position: 100% 0; 
+    }
+}
 
-          <p>Ghost Wool Price: ${woolMarket.ghost}</p>
-          <button onClick={() => sellWool("ghost")}>Sell Ghost Wool</button>
 
-          <p>Denis Wool Price: ${woolMarket.denis}</p>
-          <button onClick={() => sellWool("denis")}>Sell Denis Wool</button>
 
-          <p>Crown Wool Price: ${woolMarket.crown}</p>
-          <button onClick={() => sellWool("crown")}>Sell Crown Wool</button>
-        </div>
-      )}
+.red {
+  color: #4e0000; 
+  text-shadow: 0 0 10px red; 
+  position: absolute;
+  top: -10px;          /* move above the sheep */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  pointer-events: none; /* so clicks still hit the sheep */
+}
 
-      <div
-        className="woolPanel"
-        style={{ transform: `translate(-50%, ${panelY}px)` }}
-      >
-        <div className="panelHandle" onMouseDown={startDragPanel}></div>
-        <h3>Wool Stock</h3>
-        <p>Normal: {woolInventory.normal}</p>
-        <p>Golden: {woolInventory.golden}</p>
-        <p>Ghost: {woolInventory.ghost}</p>
-        <p>Denis: {woolInventory.denis}</p>
-        <p>Crown: {woolInventory.crown}</p>
-      </div>
 
-      <button
-        className="orange"
-        onClick={() => {
-          saveGame();
-          setSaveGameUse("Saved!");
-          setTimeout(() => setSaveGameUse("Save Game"), 500);
-        }}
-      >
-        {SaveGameUse}
-      </button>
-      <br />
-      <button
-        className="orange"
-        onClick={() => {
-          localStorage.removeItem("ezrasheepsave");
-          window.location.reload();
-        }}
-      >
-        New Game
-      </button>
-      <img src={rainbpw} className="tiny"></img>
-      <div className="toastContainer">
-        {toasts.map((t) => (
-          <div key={t.id} className="toast">
-            <strong>{t.title}</strong>
-            <h3>{t.text}</h3>
+.buttton {
+  background-position: center;
+  color: black;
+  background-image: url('data:image/jpeg;base64,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');
+}
 
-            {t.input && (
-              <>
-                <input
-                  type="text"
-                  maxLength={20}
-                  value={toastInput}
-                  onChange={(e) => setToastInput(e.target.value)}
-                />
-                <br />
-                <button
-                  onClick={() => {
-                    if (t.onSubmit) t.onSubmit(toastInput);
-                    setToastInput("");
-                  }}
-                >
-                  Confirm
-                </button>
-              </>
-            )}
+.treebutton {
+  background-position: center;
+  color: rgb(99, 0, 41);
+  background-image: url('data:image/jpeg;base64,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');
+}
 
-            {t.moretext && <p>{t.moretext}</p>}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+
+.locked {
+  background-color: black;
+  color: black;
+}
+
+.top {
+  font-size: 70px;
+  font-weight: bold;
+}
+
+.left {
+  
+  position: absolute; 
+  right: 65%;
+  z-index: 3;
+}
+
+.shears {
+  
+  position: absolute;
+  left: 70%;
+  z-index: 3;
+
+}
+
+.sheepWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px;
+    animation: moving 19s infinite linear;
+  animation-timing-function: ease-in-out;
+}
+
+.sheepImageContainer {
+  position: relative; 
+  display: inline-block; 
+  
+  width: fit-content;
+}
+
+
+.sheepSpeech {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: rgb(0, 0, 0);
+  pointer-events: none;
+  white-space: nowrap;
+  animation: floatUp 2s ease-out forwards;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -12px);
+    opacity: 0;
+  }
+}
+
+.shearsagain {
+  
+ 
+  background-image: url('./Images/shears.jpeg');
+  background-size: 105%;
+  background-color: transparent;
+  height: 52px;
+  color: black;
+}
+.corner {
+  
+  position: absolute; 
+  bottom: 40%;
+  right: 65%;
+}
+
+
+.right {
+  position: absolute; 
+  left: 93%;
+  background-image: url('./Images/shop.png');
+  background-size: 105%;
+  background-color: transparent;
+  height: 65px;
+}
+.otherRight {
+  position: absolute; 
+  left: 93%;
+  background-size: 105%;
+  background-color: bisque;
+  height: 65px;
+  color: black;
+}
+.otherRightAgain {
+  position: absolute !important; 
+  left: 91.5%;
+  background-size: 105%;
+  background-color: bisque;
+  height: 65px;
+  color: black;
+}
+.otherRightAgainAgain {
+  position: absolute !important; 
+  left: 89%;
+  background-size: 105%;
+  background-color: bisque;
+  height: 65px;
+  color: black;
+}
+
+
+.shopping {
+  position: absolute; 
+  left: 92%;
+  background-color: rgb(71, 64, 54);
+  height: 90px;
+  width: 100px;
+  font-size: small;
+}
+
+.invis {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vis {
+  opacity : 100;
+}
+
+.visible {
+  opacity : 100;
+    
+}
+
+.invisible {
+  opacity: 0;
+}
+.closed {
+
+  opacity: 0;
+  position: absolute; 
+  left: 93%;
+  background-image: url('./Images/shop.png');
+  background-size: 105%;
+  background-color: transparent;
+  height: 130px;
+  width: 130px;
+}
+
+
+.dialouge {
+  padding: 20px;
+  border-width: 6px;
+  border-radius: 15px;
+  border-color: rgb(3, 0, 0);
+  background-color: aliceblue;
+  color: rgb(7, 0, 0);
+  cursor: pointer;
+  transition:  0.4s ease-in-out;
+  z-index: 2;
+}
+
+.dialouge:hover {
+  padding: 23px;
+}
+
+.ezrasheep {
+  position: relative;
+  z-index: 1;
+  display: block;
+}
+
+@keyframes moving {
+  0% {
+    transform: translateX(-800px);
+  }
+  50% {
+    transform: translateX(0px);
+
+  }
+    100% {
+    transform: translateX(800px);
+    
+  }
+}
+
+
+
+
+.orange {
+  align-items: center !important;
+  background-clip: padding-box;
+  background-color: #fa6400;
+  border: 1px solid transparent;
+  border-radius: .25rem;
+  box-shadow: rgba(0, 0, 0, 0.02) 0 1px 3px 0;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: system-ui,-apple-system,system-ui,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  justify-content: center;
+  line-height: 1.25;
+  margin: 0;
+  min-height: 3rem;
+  padding: calc(.875rem - 1px) calc(1.5rem - 1px);
+  position: relative;
+  text-decoration: none;
+  transition: all 250ms;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  vertical-align: baseline;
+  width: auto;
+}
+
+.orange:hover,
+.orange:focus {
+  background-color: #fb8332;
+  box-shadow: rgba(0, 0, 0, 0.1) 0 4px 12px;
+}
+
+.orange:hover {
+  transform: translateY(-1px);
+}
+
+.orange:active {
+  background-color: #c85000;
+  box-shadow: rgba(0, 0, 0, .06) 0 2px 4px;
+  transform: translateY(0);
+}
+
+.hungerBar {
+  position: absolute;
+  bottom: 100%;          /* sits above the sheep */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 6px;
+  background: #333;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+  
+}
+
+.hungerFill {
+  height: 100%;
+  background: limegreen;
+    transition: width 0.3s linear, background 0.3s linear;
+  
+}
+
+.eventWarning {
+  color: red;
+  text-shadow: 2px 2px 4px #121247;
+  -webkit-text-stroke: 1px #4e0000;
+}
+
+
+.toastContainer {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  box-shadow: 4px 4px 0px black;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+  z-index: 99999;
+}
+
+.toast {
+  background: #f7f2d0;
+  color: rgb(0, 0, 0);
+  padding: 12px 16px;
+  border-radius: 8px;
+  min-width: 180px;
+  box-shadow: 0px 4px 12px rgba(0,0,0,0.4);
+  animation: toastSlide 0.4s ease;
+  pointer-events: auto;
+  z-index: 99999999999;
+}
+
+.toast strong {
+  color: rgb(63, 54, 0);
+}
+
+@keyframes toastSlide {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.achievementEntry {
+  border: 2px solid black;
+  padding: 10px;
+  margin: 10px;
+  width: 250px;
+}
+
+.achievementEntry.locked {
+  opacity: 0.4;
+}
+
+.achievementEntry.unlocked {
+  background-color: gold;
+}
+
+.tiny {
+  width: 20px !important;
+  height: 20px;
+  right: 9px;
+}
+
+.sheepName{
+  font-weight:bold;
+  text-align:center;
+  margin-bottom:3px;
+  color: blue;
+}
+
+.sheepSidebar {
+  position: fixed;
+  left: 10px;
+  top: 30px;
+  box-shadow: 4px 4px 0px black;
+
+  width: 220px;
+  max-height: 70vh;
+
+  overflow-y: auto;
+
+  background: #f7f2d0;
+  border: 3px solid black;
+  padding: 10px;
+color: black;
+  z-index: 500;
+}
+
+.sheepListEntry {
+  border-bottom: 1px solid gray;
+  padding: 6px;
+}
+
+.sheepListName {
+  font-weight: bold;
+}
+
+.sheepListType {
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+.sidebarHungerBar {
+  width: 100%;
+  height: 6px;
+  background: #444;
+  margin-top: 4px;
+    transition: width 0.3s linear, background 0.3s linear;
+}
+
+.sidebarHungerFill {
+  height: 100%;
+}
+
+.timeRipple {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: rippleExpand 0.9s ease-out forwards;
+  background: radial-gradient(circle, rgba(0,255,255,0.5) 0%, rgba(0,255,255,0.15) 30%, transparent 70%);
+  z-index: 9999;
+}
+
+@keyframes rippleExpand {
+  0% {
+    width: 10px;
+    height: 10px;
+    opacity: 0.8;
+  }
+
+  100% {
+    width: 200vw;
+    height: 200vw;
+    opacity: 0;
+  }
 }
