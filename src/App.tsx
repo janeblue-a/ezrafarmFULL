@@ -230,6 +230,16 @@ const sheepConfig: Record<string, SheepConfigEntry> = {
   },
 };
 
+const sheepSellValues: Record<SheepType, number> = {
+  normal: 120,
+  golden: 400,
+  ghost: 60,
+  denis: 180,
+  crown: 220,
+  penguin: 150,
+  time: 300,
+};
+
 const sheepLines = {
   normal: [
     "baa",
@@ -452,6 +462,32 @@ export default function App() {
     moretext?: string;
     input?: boolean;
     onSubmit?: (value: string) => void;
+    onConfirm?: () => void;
+    onCancel?: () => void;
+  };
+
+  const showConfirmToast = (
+    title: string,
+    text: string,
+    onConfirm: () => void,
+  ) => {
+    const id = Date.now() + Math.random();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id,
+        title,
+        text,
+        onConfirm: () => {
+          onConfirm();
+          setToasts((prev) => prev.filter((t) => t.id !== id));
+        },
+        onCancel: () => {
+          setToasts((prev) => prev.filter((t) => t.id !== id));
+        },
+      },
+    ]);
   };
 
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -1129,6 +1165,27 @@ export default function App() {
     }
   };
 
+  const sellSheep = (id: number) => {
+    const sheepToSell = sheeps.find((s) => s.id === id);
+    if (!sheepToSell) return;
+
+    showConfirmToast(
+      "Sell Sheep?",
+      `Sell ${sheepToSell.name} (${sheepToSell.type})?`,
+      () => {
+        setSheeps((prev) => {
+          if (prev.length <= 1) return prev;
+
+          const value = sheepSellValues[sheepToSell.type];
+
+          setMoney((m) => m + value);
+
+          return prev.filter((s) => s.id !== id);
+        });
+      },
+    );
+  };
+
   const openShop = () => {
     if (timePhase === "night") {
       shopIsOpen = false;
@@ -1362,6 +1419,8 @@ export default function App() {
               </button>
 
               <button onClick={() => showRenameToast(s.id)}>Rename</button>
+
+              <button onClick={() => sellSheep(s.id)}>Sell</button>
             </div>
           </div>
         ))}
@@ -1613,6 +1672,12 @@ export default function App() {
             )}
 
             {t.moretext && <p>{t.moretext}</p>}
+            {t.onConfirm && (
+              <>
+                <button onClick={t.onConfirm}>Confirm</button>
+                <button onClick={t.onCancel}>Cancel</button>
+              </>
+            )}
           </div>
         ))}
       </div>
