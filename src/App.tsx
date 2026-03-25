@@ -452,9 +452,9 @@ export default function App() {
     penguin: false,
     time: false,
   });
-  const [page, setPage] = useState<"game" | "catalogue" | "achievements">(
-    "game",
-  );
+  const [page, setPage] = useState<
+    "game" | "catalogue" | "achievements" | "trader"
+  >("game");
   type Toast = {
     id: number;
     title: string;
@@ -493,11 +493,101 @@ export default function App() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [toastInput, setToastInput] = useState("");
   const [panelY, setPanelY] = useState(0);
+  const [traderCooldown, setTraderCooldown] = useState(0);
+  const [traderStock, setTraderStock] = useState<
+    { type: SheepType; price: number; id: number }[]
+  >([]);
   const draggingPanel = useRef(false);
   const dragStartY = useRef(0);
 
   const panelMin = 20;
   const panelMax = 215;
+
+  const refreshTrader = () => {
+    if (traderCooldown > 0) return;
+
+    generateTraderStock();
+    setTraderCooldown(30);
+  };
+
+  useEffect(() => {
+    if (traderCooldown <= 0) return;
+
+    const timer = setInterval(() => {
+      setTraderCooldown((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [traderCooldown]);
+
+  useEffect(() => {
+    if (traderCooldown < 0) setTraderCooldown(0);
+  }, [traderCooldown]);
+
+  const rollRareSheep = (): SheepType => {
+    const rarePool: { type: SheepType; weight: number }[] = [
+      { type: "golden", weight: 2 },
+      { type: "ghost", weight: 4 },
+      { type: "denis", weight: 4 },
+      { type: "crown", weight: 3 },
+      { type: "penguin", weight: 3 },
+      { type: "time", weight: 1 },
+    ];
+
+    const totalWeight = rarePool.reduce((sum, r) => sum + r.weight, 0);
+    let roll = Math.random() * totalWeight;
+
+    for (const r of rarePool) {
+      if (roll < r.weight) return r.type;
+      roll -= r.weight;
+    }
+
+    return "golden";
+  };
+
+  const generateTraderStock = () => {
+    const stock = Array.from({ length: 3 }, () => {
+      const type = rollRareSheep();
+
+      return {
+        id: Date.now() + Math.random(),
+        type,
+        price: Math.floor(sheepSellValues[type] * (1.5 + Math.random() * 0.5)),
+      };
+    });
+
+    setTraderStock(stock);
+  };
+
+  useEffect(() => {
+    if (page === "trader") {
+      generateTraderStock();
+    }
+  }, [page]);
+  const buyTraderSheep = (entryId: number) => {
+    const item = traderStock.find((s) => s.id === entryId);
+    if (!item) return;
+
+    if (money < item.price) return;
+
+    setMoney((m) => m - item.price);
+
+    const config = sheepConfig[item.type];
+
+    const newSheep: Sheep = {
+      id: Date.now() + Math.random(),
+      type: item.type,
+      hunger: 100,
+      image: config.image,
+      isBald: false,
+      speech: "",
+      name: "Trader Sheep",
+    };
+
+    setSheeps((prev) => [...prev, newSheep]);
+
+    setTraderStock((prev) => prev.filter((s) => s.id !== entryId));
+  };
 
   useEffect(() => {
     window.addEventListener("mousemove", dragPanel);
@@ -1321,6 +1411,33 @@ export default function App() {
       setCatalogueFlavor(newFlavor);
     }
   }, [page]);
+
+  if (page === "trader") {
+    if (page === "trader") {
+      return (
+        <div className="catalogue">
+          <h1 className="power">Legitimate Store for sheep</h1>
+
+          {traderStock.map((s) => (
+            <div key={s.id} className="catalogueEntry">
+              <img src={sheepConfig[s.type].image} width={120} />
+              <p>{s.type} sheep</p>
+              <p>Price: ${s.price}</p>
+
+              <button onClick={() => buyTraderSheep(s.id)}>Buy</button>
+            </div>
+          ))}
+
+          <button onClick={() => setPage("game")}>Back</button>
+          <button onClick={refreshTrader} disabled={traderCooldown > 0}>
+            {traderCooldown > 0
+              ? `Refresh in ${traderCooldown}s`
+              : "Refresh Stock"}
+          </button>
+        </div>
+      );
+    }
+  }
   if (page === "achievements") {
     return (
       <div className="achievementsPage">
@@ -1523,6 +1640,12 @@ export default function App() {
         ))}
       </div>
 
+      <button className="right" onClick={() => setPage("trader")}>
+        Sheep Farm
+      </button>
+      <br />
+      <br />
+      <br />
       <div>
         <button className="right" onClick={openShop}>
           {timePhase === "night" ? "Closed" : "Shop"}
