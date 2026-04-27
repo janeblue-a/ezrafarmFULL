@@ -441,6 +441,15 @@ export default function App() {
     time: sheepConfig.time.woolValue,
   });
   const [rep, setRep] = useState(1);
+  const [inventory, setInventory] = useState([
+    {
+      name: "Bag of Money",
+      value: 50,
+      type: "money",
+      description:
+        "A bag of money. Use it to gain some cash. (Thanks for playing Ezranch!)",
+    },
+  ]);
   const [discoveredSheep, setDiscoveredSheep] = useState<
     Record<SheepType, boolean>
   >({
@@ -453,7 +462,7 @@ export default function App() {
     time: false,
   });
   const [page, setPage] = useState<
-    "game" | "catalogue" | "achievements" | "trader"
+    "game" | "catalogue" | "achievements" | "trader" | "inventory"
   >("game");
   type Toast = {
     id: number;
@@ -491,6 +500,7 @@ export default function App() {
   };
 
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [giftClaimed, setGiftClaimed] = useState("");
   const [toastInput, setToastInput] = useState("");
   const [panelY, setPanelY] = useState(0);
   const [traderCooldown, setTraderCooldown] = useState(0);
@@ -507,7 +517,7 @@ export default function App() {
     if (traderCooldown > 0) return;
 
     generateTraderStock();
-    setTraderCooldown(30);
+    setTraderCooldown(180);
   };
 
   useEffect(() => {
@@ -802,6 +812,7 @@ export default function App() {
       rep,
       discoveredSheep,
       achievements,
+      inventory,
     };
     localStorage.setItem("ezrasheepsave", JSON.stringify(saveData));
   };
@@ -824,6 +835,7 @@ export default function App() {
     woolInventory,
     rep,
     achievements,
+    inventory,
   ]);
 
   useEffect(() => {
@@ -859,6 +871,17 @@ export default function App() {
           denis: false,
           time: false,
         },
+      );
+      setInventory(
+        data.inventory ?? [
+          {
+            name: "Bag of Money",
+            value: 50,
+            type: "money",
+            description:
+              "A bag of money. Use it to gain some cash. (Thanks for playing Ezranch!)",
+          },
+        ],
       );
       setAchievements(data.achievements ?? {});
       setRep(data.rep ?? 1);
@@ -1412,6 +1435,46 @@ export default function App() {
     }
   }, [page]);
 
+  const changeInventory = (newI: any, value: any, type: any, desc: any) => {
+    const itemI = {
+      name: newI,
+      value: value,
+      type: type,
+      description: desc,
+    };
+    setInventory((prev) => [...prev, itemI]);
+  };
+
+  const useItem = (useCase: any) => {
+    if (useCase.type == "money") {
+      setMoney((prev) => prev + useCase.value);
+    }
+    if (useCase.type == "carrots") {
+      setCarrotCount((prev) => prev + useCase.value);
+    }
+    setInventory((prevInventory) => prevInventory.filter((i) => i !== i));
+  };
+
+  if (page === "inventory") {
+    return (
+      <>
+        {inventory.map((i) => (
+          <>
+            <div id="inventoryentry">
+              {i.name}
+              <br />
+              {i.description}
+              <br />
+              <button onClick={() => useItem(i)}>Use Item</button>
+            </div>
+            <br />
+          </>
+        ))}
+        <br />
+        <button onClick={() => setPage("game")}>Back</button>
+      </>
+    );
+  }
   if (page === "trader") {
     if (page === "trader") {
       return (
@@ -1602,6 +1665,13 @@ export default function App() {
           alt="oncemore"
         />
       ))}
+      <button
+        style={{ right: "50px" }}
+        className="otherRightYetAgain"
+        onClick={() => setPage("inventory")}
+      >
+        Inventory
+      </button>
 
       <div
         className="sheep-container"
@@ -1707,6 +1777,9 @@ export default function App() {
       >
         Achievements
       </button>
+      <br />
+      <br />
+      <br />
       {marketOpen && (
         <div className="market">
           <h3>Wool Market</h3>
@@ -1767,7 +1840,21 @@ export default function App() {
       >
         New Game
       </button>
-      <img src={rainbpw} className="tiny"></img>
+      {giftClaimed ?? (
+        <img
+          src={rainbpw}
+          className="tiny"
+          onClick={() => {
+            changeInventory(
+              "Rainbowcina's Gift",
+              325,
+              "money",
+              "A gift from Rainbowcina",
+            );
+            setGiftClaimed("a");
+          }}
+        ></img>
+      )}
       <div className="toastContainer">
         {toasts.map((t) => (
           <div key={t.id} className="toast">
