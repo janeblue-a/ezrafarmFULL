@@ -347,6 +347,16 @@ color: black;
   color: black;
 }
 
+.otherRightYetAgain {
+  position: fixed;
+  top: 30px;
+  background-size: 105%;
+  background-color: #ffe4c4;
+  height: 65px;
+  color: black;
+}
+
+
 
 .shopping {
   position: absolute; 
@@ -635,4 +645,13 @@ color: black;
     height: 200vw;
     opacity: 0;
   }
+}
+
+#inventoryentry {
+  padding: 20px;
+  background-color:#ffe4c4;
+  border-color:#3b2f1a;
+  border-width: 4px;
+  border-radius: 90px;
+  color: black;
 }
